@@ -43,9 +43,8 @@ Jinx 上游自 `3.2.4` 起改为加密发布（`new-rules/*.enc`，需接收方 
 构建产物（不联网，只读本目录）：
 
 ```bash
-python skill/scripts/build_ads.py      # ads 域名集 → build/ads/ads-src.txt
-python skill/scripts/build_direct.py   # direct 域名集 → build/direct/direct-src.txt（可选，见该脚本说明）
-bash skill/scripts/regen.sh            # 上面两步 + convert_ruleset.py 产出六份产物
+bash skill/scripts/regen.sh           # 一条命令：快照校验 → direct → ads → 六份产物 → 双闸门
+bash skill/scripts/regen.sh --build   # 只重建，不跑闸门
 ```
 
 更新上游（唯一允许联网的入口）：
