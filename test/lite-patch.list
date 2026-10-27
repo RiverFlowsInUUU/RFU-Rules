@@ -1,0 +1,11 @@
+# 217heidai lite 的追加补丁（试验件，非本仓正式产物）
+# 用途: 挂在 lite 规则集之上，补回 lite 漏拦、但已知会造成实际问题的域名。
+# 格式: Surge RULE-SET / mihomo classical 通用（每行 "类型,值"，不带策略）。
+#
+# 2026-10-27 · 小鲸看看（监控 App）广告
+#   现象: 仅用 lite 时广告全部出现；加以下 2 条后广告彻底消失。
+#   判据: lite 无 cupid.iqiyi.com，Jinx 3.2.3 与 217 full 均有 —— 实为爱奇艺 Cupid 广告 SDK。
+#   注意: 拦截 cupid 会令该 SDK 加载失败，故 tange365.com 白名单必须排在拦截行之前，
+#         否则 App 冷启动异常（见本仓 custom-direct.list 注释）。
+DOMAIN-SUFFIX,cupid.iqiyi.com
+DOMAIN-SUFFIX,cupid.ptqy.gitv.tv
