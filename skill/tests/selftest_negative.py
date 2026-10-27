@@ -435,6 +435,22 @@ def _(w):
                  encoding='utf-8')
 
 
+@case('投毒熔断失效：往上游塞民生根域却构建成功（第 6 段）', '熔断')
+def _(w):
+    """模拟上游投毒：往 jinx 快照追加 baidu.com。
+
+    守 build_ads 的投毒熔断（v10 审查三-2 + v10 核查三.3）：熔断必须在
+    **输入（merged）**处让构建失败 —— 曾经的错误实现把它放进漏斗静默剔除，
+    产物照样干净、exit 0，投毒被无声吞掉、断言成死代码。本样本即该形态的
+    回归钉：只要塞了根域还能 exit 0，就是熔断失效。
+
+    注：custom-ads.list 走 convert 阶段、不经 build_ads，不在本熔断射程
+    （那是人工维护入口，SKILL 铁律 1 管）；本判据守的是上游投毒/合并失误。
+    """
+    p = w / 'upstream' / 'jinx-3.2.3' / 'blacklist.txt'
+    p.write_text(p.read_text(encoding='utf-8') + 'baidu.com\n', encoding='utf-8')
+
+
 def main():
     if not TARGET.is_file():
         print(f'❌ 前置不达标：找不到 {TARGET}')

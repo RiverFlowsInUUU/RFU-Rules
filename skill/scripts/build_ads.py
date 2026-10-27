@@ -40,6 +40,7 @@ lite 是 16 源浓缩的另一条路线，Jinx 是第三条。三者互补，并
 断言（失败即非零退出，CI 同源）
 ================================
 ① 无 IP / CIDR / 通配 / 修饰符   ② 静态资源域为 0（命名含广告语义者除外）
+②b 投毒熔断：CIRCUIT_BREAKER 根域精确出现在输入即拒绝发布（绝不静默剔除）
 ③ MUST_CONTAIN 必需域在位         ④ direct 放行清单非空（顺序保护的前提）
 ⑤ 独立基线覆盖率 ≥ 护栏           ⑥ 规模护栏   ⑦ 无重复
 
@@ -137,19 +138,21 @@ MUST_CONTAIN = [
     "gdt.qq.com", "e.qq.com", "umeng.com", "alog.umeng.com",
     "ad.xiaomi.com", "analytics.126.net",
 ]
-# 反向熔断清单（v10 审查三-2 / 缺陷 3）：任一条**精确**出现在产物即判非零退出。
-# 两类成员，各防一种事故：
-#   · 民生根域 —— 上游投毒/合并失误把整域收进黑名单时，构建当场失败，
-#     而不是带着「全国断网级」条目发布。只判精确命中：拦
-#     hectorstatic.baidu.com 这类**子域**是正常业务，不在此列。
-#   · 规矩 5 反面实证钉子 —— 独立于 is_resource 判据的具体域。判据与断言
-#     同构时（SKILL「断言最容易犯的错」）互相看不见失真，钉子看得见。
-MUST_NOT_BLOCK = {
+# 反面实证钉子（v10 审查缺陷 3）：规矩 5 已知误拦的具体域，判据盲区补丁 ——
+# 构建时**静默剔除**（它们不是事故，是 is_resource 覆盖不到的个案）。
+# 与下面的熔断清单必须分开：钉子进漏斗早剔除没问题；根域若也静默剔除，
+# 投毒会被无声吞掉，熔断断言沦为死代码（v10 核查报告三.3 实测证实）。
+EMPIRICAL_EXCLUDE = {
+    "s.bdstatic.com", "static-s.iqiyi.com",
+}
+# 投毒熔断（v10 审查三-2）：任一根域**精确**出现在输入（merged）即构建失败、
+# 非零退出 —— 绝不静默剔除：静默吞掉等于掩盖上游投毒/合并失误。
+# 只判精确命中：拦 hectorstatic.baidu.com 这类**子域**是正常业务，不在此列。
+CIRCUIT_BREAKER = {
     "baidu.com", "qq.com", "weixin.qq.com", "alipay.com", "taobao.com",
     "tmall.com", "jd.com", "apple.com", "microsoft.com", "google.com",
     "bilibili.com", "weibo.com", "163.com", "sohu.com", "douyin.com",
     "zhihu.com",
-    "s.bdstatic.com", "static-s.iqiyi.com",
 }
 # 覆盖率断言基线必须独立于支路来源，否则是同义反复。
 # 曾用 Jinx 当基线而 Jinx 本身是 C 支路 → 91.5% 等于自证。
@@ -491,13 +494,21 @@ def main() -> int:
     # ── 合并与后处理 ────────────────────────────────────────
     merged = A | B | C
 
+    # 投毒熔断（v10 核查三.3）：在**输入**处检查，发现即判负 ——
+    # 不能放进漏斗静默剔除，否则「构建失败」的报警被吞掉、断言成死代码。
+    _breaker = [d for d in merged if d in CIRCUIT_BREAKER]
+    if _breaker:
+        print("❌ 输入含熔断清单根域（疑似上游投毒/合并失误，拒绝发布）：%s"
+              % _breaker[:5])
+        return EXIT_FAIL
+
     after_exc = {d for d in merged if not under(d, exceptions)}
     n_exc = len(merged) - len(after_exc)
 
     res_drop = {d for d in after_exc if is_resource(d) and not has_semantic(d)}
     fn_drop = {d for d in after_exc if is_function_domain(d)}
-    # 硬熔断：MUST_NOT_BLOCK 里的精确域无条件出局，不受语义/成簇豁免（v10）。
-    hard_drop = {d for d in after_exc if d in MUST_NOT_BLOCK}
+    # 反面实证钉子：判据盲区的已知误拦，静默剔除（与投毒熔断分离，见清单注释）。
+    hard_drop = {d for d in after_exc if d in EMPIRICAL_EXCLUDE}
     after_fn = after_exc - res_drop - fn_drop - hard_drop
 
     cl = collections.Counter(registrable(d) for d in after_fn)
@@ -574,9 +585,6 @@ def main() -> int:
     _res = [d for d in final if is_resource(d) and not has_semantic(d)]
     if _res:
         errs.append("产物含静态资源域 %d 条，例：%s" % (len(_res), _res[:3]))
-    _forbidden = [d for d in final if d in MUST_NOT_BLOCK]
-    if _forbidden:
-        errs.append("产物含熔断清单域名 %d 条：%s" % (len(_forbidden), _forbidden[:5]))
     # 必需域按「覆盖」语义判（v10）：剪枝后子域条目被父域连带是预期行为，
     # 只要该域仍会命中拦截（自身在集，或任一父域在集）即算在位 —— 精确命中
     # 会把「被父域覆盖」误报成缺失。
@@ -618,7 +626,7 @@ def main() -> int:
         "  静态资源剔除               : -%d" % len(res_drop),
         "  功能域剔除                 : -%d" % len(fn_drop),
         "  灰产随机长尾剔除           : -%d" % len(gray_drop),
-        "  硬熔断（MUST_NOT_BLOCK）    : -%d" % len(hard_drop),
+        "  反面实证硬剔除             : -%d" % len(hard_drop),
         "  语义上提后                 : %d" % len(climbed),
         "  后缀剪枝（父域已覆盖）      : -%d" % len(prune_log),
         "  最终产物                   : %d" % len(final),
@@ -654,7 +662,7 @@ def main() -> int:
     audit += ["  %-48s -> %s" % (s, d) for s, d in sorted(climb_log)]
     audit += ["", "八、断言"]
     audit += ["  FAIL " + e for e in errs] or [
-        "  PASS 形态 / 静态资源 / 熔断清单 / 必需域 / direct 非空 / 覆盖率 / 规模 / 无重复 —— 全部通过"]
+        "  PASS 形态 / 静态资源 / 投毒熔断 / 必需域 / direct 非空 / 覆盖率 / 规模 / 无重复 —— 全部通过"]
 
     if args.dry_run:
         print("\n".join(audit))
