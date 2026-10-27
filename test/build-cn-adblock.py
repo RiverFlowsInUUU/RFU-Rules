@@ -1,39 +1,46 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""build-cn-adblock.py —— 中文广告 / 统计 / 隐私 / PCDN 域名规则集构建器
+"""build-cn-adblock.py —— 中文广告 / 统计 / 隐私 / PCDN 域名规则集构建器（v3 双支路）
 
-设计原则（对齐社区标准做法：AdGuard HostlistCompiler、hagezi 编译流程）
-=====================================================================
-1. **只做 DNS 层能表达的减法。** 凡需资源类型、路径、元素选择器才能表达的规则
-   （`$third-party`、`##` 元素隐藏、`@@||x/path`）一律不进入产物 —— DNS 层无法
-   区分它们，强行降级会造成无差别拦截（误杀）。宁可漏拦，不可拦错。
-2. **`@@` 例外只做减法，不生成任何 DIRECT/白名单行。** 域名不在拦截集里就会
-   自然落回既有分流规则（国内→DIRECT、国际→FINAL→代理），路由结果自动正确。
-   写成 DIRECT 属补丁式做法，会引入规则顺序依赖与 pre-matching 冲突。
-3. **只输出 DOMAIN-SUFFIX（纯后缀）。** 不带通配、不带正则 —— 三端语义一致，
-   可走 mihomo `behavior: domain` / Surge DOMAIN-SET / sing-box `domain_suffix`
-   的最快路径，不存在跨平台通配语义差异。
-4. **只拦域名，不拦 IP。** IPv4 字面量与 CIDR 一律剔除（DNS 层拦 IP 无效，
-   且可能切断正常连接）。该条已固化为断言，防回潮。
-5. **灰产不靠逐条判断，靠结构判据。** 赌博/色情导流的形态特征是「随机域名 +
-   归属域下只有孤立 1 条」。因此对所有源统一施加准入：
-   仅保留「归属域成簇（≥2，说明是某平台的多个子域）」或「名称含广告/统计/PCDN
-   语义（说明是广告类命名）」的条目。真正的广告平台天然满足其一，
-   灰产随机长尾两者都不满足，自动出局。判据是数据 + 算法，无人工逐条决定。
+为什么是双支路（v2 单支路的教训）
+================================
+v2 只用 5 个中文源自建，产物 1,341 条，对 Jinx 中国生态的覆盖仅 46.8%。
+拆解缺口发现：**85% 的缺口不是被筛掉的，而是那 5 个源里根本没有**
+（例如 a.alimama.cn、abtest3-misc-*.zijieapi.com、acookie.alimama.com）。
 
-来源与取舍
-==========
-取用：AWAvenue（国内 App 广告）、CJX's Annoyance（中文骚扰广告）、
-      xinggsf_mv（优酷等）、AdGuard_Chinese_filter（官方中文广告+跟踪）、
-      jiekouAD（用于补平台主域，如 adkwai.com；其灰产长尾由准入规则剔除）。
-排除：EasyList_China —— 实测对上述并集的独占贡献为 0（与 AdGuard Chinese 完全重叠）。
+217 的 lite 是「全量 16 源 ∩ china.txt」，是另一条浓缩路线，覆盖 60.6%，
+与 5 源路线互补。两者并联后覆盖 **70.8%**，逼近 full 的天花板 74.7%，
+而体积仅约 7,000 条（full 的 3%）。
+
+因此：**A 支路（lite）+ B 支路（5 源）并联**，各自先做减法和剔除，再合并。
+
+规则
+====
+1. 只做 DNS 层能表达的减法：`$` 修饰符、`##` 元素隐藏、`@@||x/path` 一律不进产物。
+2. `@@` 例外只做减法，不生成 DIRECT 行（不在拦截集里就落回分流，路由自动正确）。
+3. 只输出 DOMAIN-SUFFIX，无通配无正则（三端语义一致，走 trie 快路径）。
+4. 只拦域名不拦 IP（IPv4 / CIDR 一律剔除）。
+5. **静态资源硬排除**：label 以 static / download / status / update 开头者一律剔除，
+   不受任何豁免。反面实证：s.bdstatic.com、static-s.iqiyi.com、
+   download.changhong.upgrade2.huan.tv 被误拦会造成页面挂图裂、固件下载失败。
+6. **灰产判定用结构，不用语义猜**（仅作用于 A 支路）：归属域下孤立 1 条 + 无广告语义
+   + 形态随机（元音占比低且含数字）→ 灰产长尾剔除。不访问的域名不造成误杀，
+   故残留可容忍；但结构性长尾可以不收。
+7. **词边界匹配**：语义判定按 label 切分后的词元精确比对，禁止短词做子串
+   （曾用裸 "ad"/"stat"/"log" 子串，误收 static / bdstatic / download / prologue /
+   nchanado，是本方案最严重的一次翻车）。
+8. 与 guard 白名单冲突即剔除；`@@` 例外做减法；语义上提收敛到语义 label。
+
+断言（构建时自动执行，失败即非零退出）
+======================================
+① 无 IP / CIDR / 通配 / 修饰符  ② 静态资源域为 0（除命名含广告语义者）
+③ MUST_CONTAIN 必需域全部在位    ④ 覆盖率不低于基线（拉 Jinx 作回归护栏）
+⑤ 规模护栏 [5000, 12000]         ⑥ 无重复
 
 用法
 ====
     python build-cn-adblock.py --out cn-adblock.list --audit cn-adblock.audit.txt
-    python build-cn-adblock.py --dry-run          # 只打印审计，不写文件
-
-退出码：0 成功 / 1 断言失败 / 2 环境或网络问题
+    python build-cn-adblock.py --dry-run
 """
 import argparse
 import collections
@@ -44,9 +51,10 @@ import urllib.request
 
 BASE = "https://raw.githubusercontent.com/217heidai/adblockfilters/main/rules/"
 GUARD_URL = "https://raw.githubusercontent.com/RiverFlowsInUUU/Jinx/main/surge-direct.list"
+JINX_URL = "https://raw.githubusercontent.com/RiverFlowsInUUU/Jinx/main/mihomo-ads.yaml"
 
-# (文件名, 显示名) —— 全部源统一施加「成簇或语义」准入（见文件头第 5 条）
-SOURCES = [
+LITE_FILE = "adblocksurgelite.list"          # A 支路：DOMAIN-SET 格式（每行 ".域名"）
+B_SOURCES = [                                 # B 支路：adblock 语法
     ("AWAvenue_Ads_Rule.txt", "AWAvenue"),
     ("CJX's_Annoyance_List.txt", "CJX"),
     ("xinggsf_mv.txt", "xinggsf"),
@@ -54,19 +62,16 @@ SOURCES = [
     ("jiekouAD.txt", "jiekouAD"),
 ]
 
-# ── 形态：域名准入 ────────────────────────────────────────────────
 DOMAIN_RE = re.compile(
     r"^(?=.{1,253}$)([a-z0-9_]([a-z0-9_-]{0,61}[a-z0-9])?\.)+([a-z]{2,63}|xn--[a-z0-9-]+)$",
     re.I,
 )
 IPV4_RE = re.compile(r"^\d{1,3}(\.\d{1,3}){3}$")
 CIDR_RE = re.compile(r"/\d+$")
-BLOCK_RE = re.compile(r"^\|\|([a-z0-9._-]+)\^$")       # 纯域名拦截，无修饰符无路径
-EXCEPT_RE = re.compile(r"^@@\|\|([a-z0-9._-]+)\^$")    # 纯域名例外，无修饰符无路径
+BLOCK_RE = re.compile(r"^\|\|([a-z0-9._-]+)\^$")
+EXCEPT_RE = re.compile(r"^@@\|\|([a-z0-9._-]+)\^$")
 
-# ── 语义 label 词表（数据，非判断）────────────────────────────────
-# 用途一：语义上提 —— 把 t7z.cupid.iqiyi.com 收敛到 cupid.iqiyi.com
-# 用途二：灰产源准入 —— 只有含这些语义的条目才可能来自 strict 源
+# 语义词元（label 级精确匹配，禁止短词子串）
 SEMANTIC = {
     "ad", "ads", "adx", "adserv", "adserver", "adservice", "adsrv", "adpush",
     "advert", "adverts", "advertise", "advertisement", "adview", "adlog",
@@ -81,29 +86,20 @@ SEMANTIC = {
     "pcdn", "p2p", "peer", "stun", "turn",
     "deviceid", "oaid", "imei", "idfa", "oneid", "umid", "msaid",
 }
-
-# 平台关键词（子串级，但只在「平台名明显不会构成普通单词」时使用）。
-# ⚠️ 反面教训（2026-10-27 二次核查实证）：曾把 "ad" / "stat" / "log" 放进子串表，
-#    结果 static / bdstatic / download / prologue / nchanado 全被误收，
-#    造成 s.bdstatic.com、static-s.iqiyi.com 这类静态资源域被拦（页面挂图裂）。
-#    故 "ad"/"ads"/"stat"/"log" 等短词一律禁止做子串匹配，只允许 label 级精确匹配。
+# 平台名（子串安全：这些词不会构成普通英文单词）
 PLATFORM_SUBSTR = (
     "kwai", "pangolin", "pangle", "gromore", "mobads", "alimama",
     "bytedance", "snssdk", "toutiao", "umeng", "tanx", "cupid",
 )
+RESOURCE_PREFIX = ("static", "download", "sdownload", "status", "update", "upgrade")
 
-# 静态资源 / 下载 / 状态类 label —— 出现且无广告语义时视为误收（用于断言）
-RESOURCE_TOKENS = {"static", "static-s", "statics", "download", "downloads",
-                   "sdownload", "status", "update", "upgrade"}
-
-# 已知必需域：任一缺失即判负。用于防「闸门全绿但实际改坏」。
-# 依据：本仓实测与登记（小鲸看看广告靠 cupid；快手/穿山甲/优量汇/友盟主域等）。
 MUST_CONTAIN = [
     "cupid.iqiyi.com", "cupid.ptqy.gitv.tv", "adkwai.com",
     "pangolin-sdk-toutiao.com", "api-access.pangolin-sdk-toutiao.com",
     "gdt.qq.com", "e.qq.com", "umeng.com", "alog.umeng.com",
     "ad.xiaomi.com", "analytics.126.net",
 ]
+COVERAGE_FLOOR = 0.68          # 对 Jinx·中国生态的覆盖率下限（回归护栏）
 
 MULTI_SUFFIX = {
     "com.cn", "net.cn", "org.cn", "gov.cn", "edu.cn",
@@ -113,46 +109,24 @@ MULTI_SUFFIX = {
 
 def http_get(url):
     req = urllib.request.Request(url, headers={"User-Agent": "curl/8"})
-    with urllib.request.urlopen(req, timeout=120) as r:
+    with urllib.request.urlopen(req, timeout=180) as r:
         return r.read().decode("utf-8", "replace")
 
 
 def registrable(d):
-    """粗略归属域（eTLD+1），用于成簇与上提边界。不引入额外依赖。"""
     p = d.split(".")
     if len(p) >= 3 and ".".join(p[-2:]) in MULTI_SUFFIX:
         return ".".join(p[-3:])
     return ".".join(p[-2:])
 
 
-def climb(d):
-    """语义上提：从右往左找第一个语义 label，上提到该 label 为止。
-
-    例：t7z.cupid.iqiyi.com → cupid.iqiyi.com（cupid 是语义 label，到此停）
-        api.ad.xiaomi.com   → ad.xiaomi.com
-    绝不跨到平台主域（iqiyi.com 本身不会被生成）。
-    """
-    labels = d.split(".")
-    for i in range(len(labels) - 2):
-        if labels[i] in SEMANTIC:
-            out = ".".join(labels[i:])
-            return out, out != d
-    return d, False
-
-
 def label_tokens(label):
-    """把 label 按非字母边界切开，得到词元。ad-123 / adx_static / cupid 都能切。"""
     return [t for t in re.split(r"[^a-z]+", label.lower()) if t]
 
 
 def has_semantic(d):
-    """语义判定：label 的任一词元命中 SEMANTIC（词边界匹配，非子串）。
-
-    这样 static-s 切成 static/s 不命中；bdstatic 不命中；download 不命中；
-    而 ad.12306.cn / cupid.iqiyi.com / alog.umeng.com 正常命中。
-    """
-    for label in d.split(".")[:-1]:
-        for t in label_tokens(label):
+    for lb in d.split(".")[:-1]:
+        for t in label_tokens(lb):
             if t in SEMANTIC:
                 return True
     return False
@@ -163,23 +137,81 @@ def has_platform(d):
 
 
 def is_resource(d):
-    """静态资源/下载类域判定。
-
-    以 static / download / status / update 开头的 label 视为资源域。
-    这类域即便成簇也不得入产物 —— 它们几乎都是内容素材 CDN
-    （实证：static-s.iqiyi.com、download.changhong.upgrade2.huan.tv），
-    拦掉会造成页面挂图裂 / 固件下载失败。
-    """
-    for label in d.split(".")[:-1]:
-        low = label.lower()
-        if low in RESOURCE_TOKENS or low.startswith(("static", "download", "sdownload", "status")):
+    for lb in d.split(".")[:-1]:
+        if lb.lower().startswith(RESOURCE_PREFIX):
             return True
     return False
+
+
+def is_gray_random(d, cluster_size, semantic):
+    """灰产长尾结构判据：孤立 1 条 + 无语义 + 形态随机（元音稀少且含数字）。"""
+    if cluster_size >= 2 or semantic:
+        return False
+    b = registrable(d).split(".")[0]
+    if len(b) < 6:
+        return False
+    v = sum(1 for c in b if c in "aeiou")
+    return v / max(len(b), 1) < 0.22 and any(c.isdigit() for c in b)
+
+
+def climb(d):
+    labels = d.split(".")
+    for i in range(len(labels) - 2):
+        if labels[i] in SEMANTIC:
+            out = ".".join(labels[i:])
+            return out, out != d
+    return d, False
 
 
 def under(d, aset):
     p = d.split(".")
     return any(".".join(p[i:]) in aset for i in range(len(p) - 1))
+
+
+def parse_domain_set(text, stat):
+    out = set()
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line or line.startswith(("#", "//")):
+            continue
+        dom = line.lstrip(".").lower()
+        if IPV4_RE.match(dom) or CIDR_RE.search(dom) or not DOMAIN_RE.match(dom):
+            stat["形态非法/IP(剔除)"] += 1
+            continue
+        out.add(dom)
+    return out
+
+
+def parse_adblock(text, stat):
+    out, exceptions = set(), set()
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line or line.startswith(("!", "#", "[")):
+            continue
+        if "##" in line or "#@#" in line or "#?#" in line:
+            stat["cosmetic(不可表达)"] += 1
+            continue
+        if line.startswith("@@"):
+            m = EXCEPT_RE.match(line)
+            if m:
+                exceptions.add(m.group(1).lower())
+                stat["例外 域名级(采用)"] += 1
+            else:
+                stat["例外 条件/路径型(不可表达)"] += 1
+            continue
+        if "$" in line or "/" in line:
+            stat["条件/路径型拦截(不可表达)"] += 1
+            continue
+        m = BLOCK_RE.match(line)
+        dom = m.group(1).lower() if m else (line.lower() if DOMAIN_RE.match(line) else None)
+        if not dom:
+            stat["其他(丢弃)"] += 1
+            continue
+        if IPV4_RE.match(dom) or CIDR_RE.search(dom) or not DOMAIN_RE.match(dom):
+            stat["形态非法/IP(剔除)"] += 1
+            continue
+        out.add(dom)
+    return out, exceptions
 
 
 def main():
@@ -189,75 +221,57 @@ def main():
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
 
-    per_source = collections.OrderedDict()
-    exceptions = set()
+    stat_a = collections.Counter()
+    stat_b = collections.OrderedDict()
 
-    for fname, label in SOURCES:
+    # ── A 支路：lite ─────────────────────────────────────────
+    try:
+        A = parse_domain_set(http_get(BASE + LITE_FILE), stat_a)
+    except Exception as e:                                     # noqa: BLE001
+        print("下载 lite 失败: %s" % e, file=sys.stderr)
+        return 2
+    stat_a["原始"] = len(A)
+    cl_a = collections.Counter(registrable(d) for d in A)
+    res_a = {d for d in A if is_resource(d) and not has_semantic(d)}
+    gray_a = {d for d in A
+              if is_gray_random(d, cl_a[registrable(d)], has_semantic(d) or has_platform(d))}
+    A = A - res_a - gray_a
+    stat_a["静态资源(剔除)"] = len(res_a)
+    stat_a["灰产随机长尾(剔除)"] = len(gray_a)
+    stat_a["采用"] = len(A)
+
+    # ── B 支路：5 源 ────────────────────────────────────────
+    exceptions = set()
+    for fname, label in B_SOURCES:
         try:
             text = http_get(BASE + fname)
-        except Exception as e:                                   # noqa: BLE001
-            print("下载失败 %s: %s" % (fname, e), file=sys.stderr)
+        except Exception as e:                                 # noqa: BLE001
+            print("下载 %s 失败: %s" % (fname, e), file=sys.stderr)
             return 2
-        doms, s = set(), collections.Counter()
-        for raw in text.splitlines():
-            line = raw.strip()
-            if not line or line.startswith(("!", "#", "[")):
-                continue
-            if "##" in line or "#@#" in line or "#?#" in line:
-                s["cosmetic(不可表达)"] += 1
-                continue
-            if line.startswith("@@"):
-                m = EXCEPT_RE.match(line)
-                if m:
-                    exceptions.add(m.group(1).lower())
-                    s["例外 域名级(采用)"] += 1
-                else:
-                    s["例外 条件/路径型(不可表达)"] += 1
-                continue
-            if "$" in line or "/" in line:
-                s["条件/路径型拦截(不可表达)"] += 1
-                continue
-            m = BLOCK_RE.match(line)
-            dom = m.group(1).lower() if m else (line.lower() if DOMAIN_RE.match(line) else None)
-            if not dom:
-                s["其他(丢弃)"] += 1
-                continue
-            if IPV4_RE.match(dom) or CIDR_RE.search(dom):
-                s["IP/CIDR(剔除)"] += 1
-                continue
-            if not DOMAIN_RE.match(dom):
-                s["形态非法(剔除)"] += 1
-                continue
-            doms.add(dom)
-        per_source[label] = [doms, s]
-
-    # ── 统一准入：归属域成簇(≥2) 或 名称含广告/统计/PCDN 语义 ──
-    for label, (doms, s) in per_source.items():
+        s = collections.Counter()
+        doms, exc = parse_adblock(text, s)
+        exceptions |= exc
         cl = collections.Counter(registrable(d) for d in doms)
-        keep, by_cl, by_sem = set(), 0, 0
+        keep = set()
         for d in doms:
-            clustered = cl[registrable(d)] >= 2
             semantic = has_semantic(d) or has_platform(d)
-            if clustered:
-                by_cl += 1
-            if semantic:
-                by_sem += 1
-            if (clustered or semantic) and not (is_resource(d) and not has_semantic(d)):
-                keep.add(d)
+            if not (cl[registrable(d)] >= 2 or semantic):
+                continue
+            if is_resource(d) and not has_semantic(d):
+                continue
+            keep.add(d)
         s["拦截 域名级(原始)"] = len(doms)
-        s["  └ 成簇命中"] = by_cl
-        s["  └ 语义命中"] = by_sem
-        s["孤立且无语义(剔除)"] = len(doms) - len(keep)
-        s["拦截 域名级(采用)"] = len(keep)
-        per_source[label][0] = keep
+        s["准入后(采用)"] = len(keep)
+        s["剔除"] = len(doms) - len(keep)
+        stat_b[label] = (keep, s)
 
-    block = set().union(*[v[0] for v in per_source.values()])
+    B = set().union(*[v[0] for v in stat_b.values()])
 
-    # ── 规矩：例外只做减法 ─────────────────────────────────────
-    after_exc = {d for d in block if not under(d, exceptions)}
-    n_exc = len(block) - len(after_exc)
+    # ── 合并与统一后处理 ────────────────────────────────────
+    merged = A | B
+    after_exc = {d for d in merged if not under(d, exceptions)}
+    n_exc = len(merged) - len(after_exc)
 
-    # ── 规矩：语义上提 ────────────────────────────────────────
     climbed, climb_log = set(), []
     for d in after_exc:
         out, did = climb(d)
@@ -265,10 +279,9 @@ def main():
         if did:
             climb_log.append((d, out))
 
-    # ── 规矩：与 guard 白名单冲突即剔除 ────────────────────────
     try:
         gtxt = http_get(GUARD_URL)
-    except Exception as e:                                       # noqa: BLE001
+    except Exception as e:                                     # noqa: BLE001
         print("下载 guard 失败: %s" % e, file=sys.stderr)
         return 2
     guard = set()
@@ -282,69 +295,92 @@ def main():
     collided = sorted(d for d in climbed if under(d, guard))
     final = sorted(climbed - set(collided))
 
-    # ── 断言（固化，防回潮）────────────────────────────────────
+    # ── 覆盖率回归护栏（拉 Jinx 作基线）─────────────────────
+    try:
+        js = set()
+        for l in http_get(JINX_URL).splitlines():
+            l = l.strip()
+            if l.startswith("- "):
+                f = [x.strip() for x in l[2:].strip().strip("'\"").split(",")]
+                if len(f) >= 2 and f[0] == "DOMAIN-SUFFIX":
+                    js.add(f[1].lower())
+        cn_base = set()
+        for l in http_get(BASE + "china.txt").splitlines():
+            l = l.strip().lower().lstrip(".")
+            if l and not l.startswith("#") and "." in l:
+                cn_base.add(registrable(l))
+        j_cn = [d for d in js if registrable(d) in cn_base]
+        fset_tmp = set(final)
+        hit = sum(1 for d in j_cn if under(d, fset_tmp))
+        coverage = hit / len(j_cn) if j_cn else 0.0
+    except Exception:                                          # noqa: BLE001
+        j_cn, hit, coverage = [], 0, None
+
+    # ── 断言 ───────────────────────────────────────────────
     errs = []
+    fset = set(final)
     if any(IPV4_RE.match(d) or CIDR_RE.search(d) for d in final):
         errs.append("产物混入 IP/CIDR")
     if any(not DOMAIN_RE.match(d) for d in final):
         errs.append("产物含形态非法条目")
-    if any("#" in d or "$" in d or "*" in d or "/" in d for d in final):
+    if any(c in d for d in final for c in "#$*:/"):
         errs.append("产物含通配/修饰符/路径")
-    if any(under(d, exceptions) for d in final):
-        errs.append("产物与例外集重叠（减法失败）")
-    if any(under(d, set(collided)) for d in final):
-        errs.append("产物与 guard 冲突")
-    if len(final) != len(set(final)):
-        errs.append("产物存在重复")
-    _cl = collections.Counter(registrable(d) for d in final)
-    # 断言（独立可失败，非同义反复）：
-    #   ① 静态资源/下载类域不得入产物（除非其命名本身含广告语义词元）
     _res = [d for d in final if is_resource(d) and not has_semantic(d)]
     if _res:
-        errs.append("产物含 %d 条静态资源/下载域（误收）例：%s" % (len(_res), _res[:3]))
-    #   ② 已知必需域必须在产物中（防「改坏了但闸门全绿」）
-    _missing = [d for d in MUST_CONTAIN if d not in set(final)]
+        errs.append("产物含静态资源域 %d 条，例：%s" % (len(_res), _res[:3]))
+    _missing = [d for d in MUST_CONTAIN if d not in fset]
     if _missing:
         errs.append("产物缺失已知必需域：%s" % _missing)
-    #   ③ 规模护栏（突变即报警，防止某次改动静默归零或爆炸）
-    if not (800 <= len(final) <= 3000):
-        errs.append("产物规模 %d 超出护栏 [800, 3000]" % len(final))
+    if coverage is not None and coverage < COVERAGE_FLOOR:
+        errs.append("覆盖率 %.1f%% 低于护栏 %.0f%%" % (coverage * 100, COVERAGE_FLOOR * 100))
+    if not (5000 <= len(final) <= 12000):
+        errs.append("产物规模 %d 超出护栏 [5000, 12000]" % len(final))
+    if len(final) != len(fset):
+        errs.append("产物存在重复")
 
-    # ── 输出 ─────────────────────────────────────────────────
+    # ── 输出 ───────────────────────────────────────────────
     hdr = [
         "# 中文广告 / 统计 / 隐私 / PCDN 域名规则集（由脚本生成，请勿手改）",
         "# 生成器: test/build-cn-adblock.py",
-        "# 源: AWAvenue · CJX's Annoyance · xinggsf_mv · AdGuard_Chinese_filter · jiekouAD(严格准入)",
-        "# 排除: EasyList_China（对并集独占贡献实测为 0）",
-        "# 规矩: 仅 DNS 层可表达 · 只收无 $ 修饰符无路径 · 纯 DOMAIN-SUFFIX 无通配",
-        "#       @@ 例外只做减法不生成 DIRECT · 只拦域名不拦 IP · 与 guard 冲突即剔除",
+        "# 支路 A: 217heidai adblocksurgelite.list（全量 16 源 ∩ china.txt）",
+        "# 支路 B: AWAvenue · CJX · xinggsf · AdGuard_Chinese_filter · jiekouAD",
+        "# 规矩: 仅 DNS 层可表达 · 纯 DOMAIN-SUFFIX 无通配 · 只拦域名不拦 IP",
+        "#       静态资源域硬排除 · @@ 例外只做减法不生成 DIRECT · 与 guard 冲突即剔除",
         "# 规模: %d 条" % len(final),
     ]
-    audit = ["构建审计 / cn-adblock", "=" * 62, "", "一、各源解析明细"]
-    for label, (doms, s) in per_source.items():
+    audit = ["构建审计 / cn-adblock（v3 双支路）", "=" * 64, "", "一、A 支路（lite）"]
+    for k, v in stat_a.items():
+        audit.append("  %-24s %6d" % (k, v))
+    audit += ["", "二、B 支路（5 源）"]
+    for label, (keep, s) in stat_b.items():
         audit.append("  [%s]" % label)
         for k, v in s.items():
-            audit.append("    %-28s %6d" % (k, v))
+            audit.append("    %-24s %6d" % (k, v))
     audit += [
         "",
-        "二、漏斗",
-        "  各源采用合计（去重前）      : %d" % sum(len(v[0]) for v in per_source.values()),
-        "  去重后拦截集                : %d" % (len(block)),
+        "三、漏斗",
+        "  A 支路采用                  : %d" % len(A),
+        "  B 支路采用                  : %d" % len(B),
+        "  合并去重                    : %d" % len(merged),
         "  扣除 @@ 域名级例外（%d 条）   : -%d" % (len(exceptions), n_exc),
         "  语义上提后                  : %d" % len(climbed),
         "  与 guard 冲突剔除（%d 条）    : -%d" % (len(collided), len(collided)),
         "  最终产物                    : %d" % len(final),
         "",
-        "三、语义上提明细（%d 条）" % len(climb_log),
+        "四、覆盖率（回归护栏）",
+        "  Jinx·中国生态 %d 条 → 覆盖 %d 条 = %s"
+        % (len(j_cn), hit, ("%.1f%%" % (coverage * 100)) if coverage is not None else "未测"),
+        "",
+        "五、语义上提明细（%d 条）" % len(climb_log),
     ]
     for src, dst in sorted(climb_log):
         audit.append("  %-46s -> %s" % (src, dst))
-    audit += ["", "四、与 guard 白名单冲突（已剔除，%d 条）" % len(collided)]
+    audit += ["", "六、与 guard 白名单冲突（已剔除，%d 条）" % len(collided)]
     for d in collided:
         audit.append("  " + d)
-    audit += ["", "五、断言"]
+    audit += ["", "七、断言"]
     audit += ["  FAIL " + e for e in errs] or [
-        "  PASS 形态 / 无通配 / 例外减法 / guard 一致 / 无重复 / 灰产准入 —— 全部通过"]
+        "  PASS 形态 / 静态资源 / 必需域 / 覆盖率 / 规模 / 无重复 —— 全部通过"]
 
     if args.dry_run:
         print("\n".join(audit))

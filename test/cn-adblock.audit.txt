@@ -1,102 +1,144 @@
-构建审计 / cn-adblock
-==============================================================
+构建审计 / cn-adblock（v3 双支路）
+================================================================
 
-一、各源解析明细
+一、A 支路（lite）
+  原始                         8480
+  静态资源(剔除)                     45
+  灰产随机长尾(剔除)                 1944
+  采用                         6491
+
+二、B 支路（5 源）
   [AWAvenue]
-    其他(丢弃)                            4
-    拦截 域名级(原始)                      969
-      └ 成簇命中                        729
-      └ 语义命中                        358
-    孤立且无语义(剔除)                      160
-    拦截 域名级(采用)                      809
+    其他(丢弃)                        4
+    拦截 域名级(原始)                  969
+    准入后(采用)                     806
+    剔除                          163
   [CJX]
-    条件/路径型拦截(不可表达)                  604
-    其他(丢弃)                           11
-    cosmetic(不可表达)                 1082
-    例外 条件/路径型(不可表达)                   6
-    IP/CIDR(剔除)                       1
-    拦截 域名级(原始)                      115
-      └ 成簇命中                         28
-      └ 语义命中                         35
-    孤立且无语义(剔除)                       60
-    拦截 域名级(采用)                       55
+    条件/路径型拦截(不可表达)              604
+    其他(丢弃)                       11
+    cosmetic(不可表达)             1082
+    例外 条件/路径型(不可表达)               6
+    形态非法/IP(剔除)                   1
+    拦截 域名级(原始)                  115
+    准入后(采用)                      55
+    剔除                           60
   [xinggsf]
-    cosmetic(不可表达)                   36
-    例外 条件/路径型(不可表达)                   4
-    条件/路径型拦截(不可表达)                   65
-    其他(丢弃)                            2
-    拦截 域名级(原始)                       27
-      └ 成簇命中                         12
-      └ 语义命中                          5
-    孤立且无语义(剔除)                       13
-    拦截 域名级(采用)                       14
+    cosmetic(不可表达)               36
+    例外 条件/路径型(不可表达)               4
+    条件/路径型拦截(不可表达)               65
+    其他(丢弃)                        2
+    拦截 域名级(原始)                   27
+    准入后(采用)                      14
+    剔除                           13
   [AdGuard-CN]
-    条件/路径型拦截(不可表达)                 5865
-    其他(丢弃)                          160
-    例外 条件/路径型(不可表达)                1143
-    cosmetic(不可表达)                 7243
-    IP/CIDR(剔除)                       5
-    例外 域名级(采用)                       11
-    拦截 域名级(原始)                     5761
-      └ 成簇命中                        254
-      └ 语义命中                         44
-    孤立且无语义(剔除)                     5474
-    拦截 域名级(采用)                      287
+    条件/路径型拦截(不可表达)             5865
+    其他(丢弃)                      160
+    例外 条件/路径型(不可表达)            1143
+    cosmetic(不可表达)             7243
+    形态非法/IP(剔除)                   5
+    例外 域名级(采用)                   11
+    拦截 域名级(原始)                 5761
+    准入后(采用)                     287
+    剔除                         5474
   [jiekouAD]
-    其他(丢弃)                           33
-    IP/CIDR(剔除)                       5
-    例外 条件/路径型(不可表达)                  28
-    例外 域名级(采用)                        4
-    条件/路径型拦截(不可表达)                  456
-    cosmetic(不可表达)                  327
-    拦截 域名级(原始)                     4508
-      └ 成簇命中                        350
-      └ 语义命中                        157
-    孤立且无语义(剔除)                     4103
-    拦截 域名级(采用)                      405
+    其他(丢弃)                       33
+    形态非法/IP(剔除)                   5
+    例外 条件/路径型(不可表达)              28
+    例外 域名级(采用)                    4
+    条件/路径型拦截(不可表达)              456
+    cosmetic(不可表达)              327
+    拦截 域名级(原始)                 4508
+    准入后(采用)                     405
+    剔除                         4103
 
-二、漏斗
-  各源采用合计（去重前）      : 1570
-  去重后拦截集                : 1381
-  扣除 @@ 域名级例外（15 条）   : -1
-  语义上提后                  : 1349
-  与 guard 冲突剔除（8 条）    : -8
-  最终产物                    : 1341
+三、漏斗
+  A 支路采用                  : 6491
+  B 支路采用                  : 1378
+  合并去重                    : 7188
+  扣除 @@ 域名级例外（15 条）   : -4
+  语义上提后                  : 7125
+  与 guard 冲突剔除（17 条）    : -17
+  最终产物                    : 7108
 
-三、语义上提明细（50 条）
+四、覆盖率（回归护栏）
+  Jinx·中国生态 1511 条 → 覆盖 1067 条 = 70.6%
+
+五、语义上提明细（93 条）
+  adx-f.ads.heytapmobi.com                       -> ads.heytapmobi.com
+  adx-id.ads.heytapmobi.com                      -> ads.heytapmobi.com
+  adx-in.ads.heytapmobi.com                      -> ads.heytapmobi.com
+  adx-sg.ads.heytapmobi.com                      -> ads.heytapmobi.com
   adxserver.ad.cmvideo.cn                        -> ad.cmvideo.cn
   api.ad.xiaomi.com                              -> ad.xiaomi.com
+  api.collect.data.intl.miui.com                 -> collect.data.intl.miui.com
   api.ssp.xcultur.com                            -> ssp.xcultur.com
+  app.log.nf.migu.cn                             -> log.nf.migu.cn
   auction.unityads.unity3d.com                   -> unityads.unity3d.com
   b1-data.ads.heytapmobi.com                     -> ads.heytapmobi.com
+  b2-data.ads.heytapmobi.com                     -> ads.heytapmobi.com
+  bdapi-id.ads.heytapmobi.com                    -> ads.heytapmobi.com
+  bdapi-in.ads.heytapmobi.com                    -> ads.heytapmobi.com
+  bdapi.ads.heytapmobi.com                       -> ads.heytapmobi.com
   bdapi.ads.oppomobile.com                       -> ads.oppomobile.com
+  bidder.dsp.outfit7.com                         -> dsp.outfit7.com
   bj.ad.track.66mobi.com                         -> ad.track.66mobi.com
   c2.gdt.qq.com                                  -> gdt.qq.com
   canvas-cdn.gdt.qq.com                          -> gdt.qq.com
+  ck.ads.heytapmobi.com                          -> ads.heytapmobi.com
   ck.ads.oppomobile.com                          -> ads.oppomobile.com
+  cl-data-f.ads.heytapmobi.com                   -> ads.heytapmobi.com
+  cl-data-id.ads.heytapmobi.com                  -> ads.heytapmobi.com
+  cl-data-in.ads.heytapmobi.com                  -> ads.heytapmobi.com
+  cl-data-sg.ads.heytapmobi.com                  -> ads.heytapmobi.com
+  cl-data.ads.heytapmobi.com                     -> ads.heytapmobi.com
+  cn-beijing-c.dualstack.log.usd.alibabadns.com  -> log.usd.alibabadns.com
+  cn-hangzhou-c.dualstack.log.usd.alibabadns.com -> log.usd.alibabadns.com
+  cn-hangzhou.dualstack.log.usd.alibabadns.com   -> log.usd.alibabadns.com
+  cn-qingdao.dualstack.log.usd.alibabadns.com    -> log.usd.alibabadns.com
+  config.ad.falconnet.app                        -> ad.falconnet.app
   config.unityads.unity3d.com                    -> unityads.unity3d.com
+  darvin-ec.ads.heytapmobi.com                   -> ads.heytapmobi.com
+  data.ads.heytapmobi.com                        -> ads.heytapmobi.com
   data.ads.oppomobile.com                        -> ads.oppomobile.com
   de.ad.gameley.com                              -> ad.gameley.com
   diagnosis.ad.xiaomi.com                        -> ad.xiaomi.com
   e.ad.xiaomi.com                                -> ad.xiaomi.com
   edge.ads.twitch.tv                             -> ads.twitch.tv
+  event.stat.wedobest.com.cn                     -> stat.wedobest.com.cn
+  g.analytics.versa-ai.com                       -> analytics.versa-ai.com
   globalapi.ad.xiaomi.com                        -> ad.xiaomi.com
   h5.analytics.126.net                           -> analytics.126.net
+  hwth.log.slb.avlyun.com                        -> log.slb.avlyun.com
   ii.gdt.qq.com                                  -> gdt.qq.com
+  imp.ad.xelements.cn                            -> ad.xelements.cn
+  iqiyim.adtrack.enlightent.cn                   -> adtrack.enlightent.cn
   jp.ad.gameley.com                              -> ad.gameley.com
   m.ad.zhangyue.com                              -> ad.zhangyue.com
   mi.gdt.qq.com                                  -> gdt.qq.com
+  mon.ad.xelements.cn                            -> ad.xelements.cn
+  ocdn.ad.xelements.cn                           -> ad.xelements.cn
+  ocdn.ad.xelements.cn.w.kunlunaq.com            -> ad.xelements.cn.w.kunlunaq.com
   otheve.beacon.qq.com                           -> beacon.qq.com
+  p66-ad.adkwai.com.v1.kwaiselfcdn.com           -> adkwai.com.v1.kwaiselfcdn.com
   q.i.gdt.qq.com                                 -> gdt.qq.com
+  req.adx.xlqeai.com                             -> adx.xlqeai.com
   rpt.gdt.qq.com                                 -> gdt.qq.com
   rr.tracker.mobiletracking.ru                   -> tracker.mobiletracking.ru
   sdk.ad.smaato.net                              -> ad.smaato.net
   sdk.adx.adwangmai.com                          -> adx.adwangmai.com
   sdk.mobads.adwangmai.com                       -> mobads.adwangmai.com
+  sdk.stat.foreign.nearme.com.cn                 -> stat.foreign.nearme.com.cn
   sdkconfig.ad.intl.xiaomi.com                   -> ad.intl.xiaomi.com
   sdkconfig.ad.xiaomi.com                        -> ad.xiaomi.com
+  sentry.monitoring.ugnas.com                    -> monitoring.ugnas.com
   sms.ads.oppomobile.com                         -> ads.oppomobile.com
+  ssp-adx.ads.heytapmobi.com                     -> ads.heytapmobi.com
+  stg-data-f.ads.heytapmobi.com                  -> ads.heytapmobi.com
+  stg-data-id.ads.heytapmobi.com                 -> ads.heytapmobi.com
+  stg-data-in.ads.heytapmobi.com                 -> ads.heytapmobi.com
+  stg-data-sg.ads.heytapmobi.com                 -> ads.heytapmobi.com
   stg-data.ads.heytapmobi.com                    -> ads.heytapmobi.com
+  store.log.ksyun.com                            -> log.ksyun.com
   t.track.ad.xiaomi.com                          -> track.ad.xiaomi.com
   t7z.cupid.iqiyi.com                            -> cupid.iqiyi.com
   t7z.cupid.ptqy.gitv.tv                         -> cupid.ptqy.gitv.tv
@@ -104,6 +146,7 @@
   test.ad.xiaomi.com                             -> ad.xiaomi.com
   test.e.ad.xiaomi.com                           -> ad.xiaomi.com
   uapi.ads.heytapmobi.com                        -> ads.heytapmobi.com
+  v.ad.xelements.cn                              -> ad.xelements.cn
   v.adx.hubcloud.com.cn                          -> adx.hubcloud.com.cn
   v2.gdt.qq.com                                  -> gdt.qq.com
   v2mi.gdt.qq.com                                -> gdt.qq.com
@@ -115,15 +158,24 @@
   yk-ssp.ad.youku.com                            -> ad.youku.com
   zeus.ad.xiaomi.com                             -> ad.xiaomi.com
 
-四、与 guard 白名单冲突（已剔除，8 条）
+六、与 guard 白名单冲突（已剔除，17 条）
   apd-pcdnwxlogin.teg.tencent-cloud.net
   apd-pcdnwxnat.teg.tencent-cloud.net
   apd-pcdnwxstat.teg.tencent-cloud.net
   appcfg.v.qq.com
+  cactus.jd.com
+  httpdns.meituan.com
+  jpush.cn
+  mssdk.bytedance.com
   sdkapi.cloooud.com
+  stat-ea01.tange365.com
+  stat-na01.tange365.com
+  stat-we01.tange365.com
+  stats-api-we-01.tange365.com
+  stats-sdk.tange365.com
   tnc3-aliec2.snssdk.com
   tnc3-alisc1.snssdk.com
   tnc3-bjlgy.snssdk.com
 
-五、断言
-  PASS 形态 / 无通配 / 例外减法 / guard 一致 / 无重复 / 灰产准入 —— 全部通过
+七、断言
+  PASS 形态 / 静态资源 / 必需域 / 覆盖率 / 规模 / 无重复 —— 全部通过
