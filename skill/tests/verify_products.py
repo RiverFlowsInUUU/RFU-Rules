@@ -47,9 +47,10 @@ direct 仍由上游白名单瘦身而来。两者都只读 `upstream/`，**构�
      否则带 U+FE0F 的那个会占两格、该行在宽字符字体下错位。
  12. 白名单 × 拦截集重叠清单（OVERLAP.md）与当前产物一致 —— 独立复算，
      防「清单写的和产物算的不是一回事」。这是本仓唯一对外可见的风险清单。
- 13. 段号引用 == 真实段标 —— 仓内「第 N 段」的 N 必须存在于 rep.section 段标里。
-     「第 N 段」是手写常量，段号随拆分而变；此类漂移已发生四次且前三次都靠
-     外部审查抓出，本段让它自己叫（v5 审查 3.3）。
+ 13. 段号引用与段数声明 == 真实段标/段数 —— ①「第 N 段」的 N 必须在段标里；
+     ② 去掉①后残余的裸「N 段」必须等于编号段总数。「第 N 段」与「N 段」都是
+     手写常量、随拆分漂移，此类失真已发生五次且前四次全靠外部审查抓出
+     （v5 审查 3.3 提议、v6 审查 2.1 补全第②型）。
 
 闸门自身可信度由 skill/tests/selftest_negative.py 保证：它在临时副本仓里
 制造 18 种典型错误，要求本脚本逐一判负 —— 防止闸门退化成「永远绿的空操作」。
@@ -1250,11 +1251,15 @@ def seg_section_refs(root, rep):
     段标与内容不符、生成器硬编码段号在同一次拆分中失效），前三次都靠外部审查抓出。
     本段让第四类「自己叫」。
 
-    判据：提取本脚本全部 rep.section(...) 的段标 id 作为真值；
-    扫描仓内文本（排除 CHANGELOG 历史记录、upstream/、build/、.git/），
-    每一处「第 N 段」的 N 必须在真值里。
+    判据两型（v6 审查 2.1/2.2/2.3）：
+      ① 段号引用：每处「第 N 段」的 N 必须在 rep.section 段标真值里；
+      ② 段数声明：去掉①的匹配后，残余文本里的裸「N 段」必须等于编号段总数
+        （编号段 = 段标去掉前置 0 后的个数）。「段数 12 实为 13」「OVERLAP 写共 14」
+        这两类已发生过的漂移都属此型 —— 其中生成物/生成器里的声明手改会被覆盖，
+        此前完全无人守。
+    扫描排除 CHANGELOG 历史记录、upstream/、build/、.git/。
     """
-    rep.section('13. 段号引用 == 真实段标')
+    rep.section('13. 段号引用与段数声明 == 真实段标/段数')
     src = Path(__file__).read_text(encoding='utf-8')
     labels = set(re.findall(r"rep\.section\('([0-9]+[a-z]?)\.", src))
     if not labels:
@@ -1266,17 +1271,14 @@ def seg_section_refs(root, rep):
         m = re.match(r'(\d+)([a-z]?)', n)
         return (int(m.group(1)), m.group(2))
 
-    bad, scanned = [], 0
+    n_seg = len([k for k in labels if k != '0'])   # 编号段总数（前置 0 不计）
+    bad, bad_count, scanned = [], [], 0
     for p in root.rglob('*'):
         if not p.is_file():
             continue
         rel = p.relative_to(root).as_posix()
         if (rel.startswith(('upstream/', 'build/', '.git/', '.workbuddy/'))
-                or rel == 'CHANGELOG.md'          # 历史记录描述的是当时状态，不参与
-                or rel == 'skill/tests/selftest_negative.py'):
-            # ↑ 负样本本体刻意含有假段号（制造不存在段标的样本），是本判据的测试病灶，
-            #   不是失真 —— 排除。首跑时它连同本注释的初版措辞一起被扫出来过，
-            #   属于预期内的自指。
+                or rel == 'CHANGELOG.md'):      # 历史记录描述的是当时状态，不参与
             continue
         if p.suffix not in ('.md', '.py', '.sh', '.yml', '.yaml', '.txt', '.json', '.list'):
             continue
@@ -1284,13 +1286,22 @@ def seg_section_refs(root, rep):
             text = p.read_text(encoding='utf-8', errors='replace')
         except Exception:                       # noqa: BLE001
             continue
+        # ① 段号引用
         for m in re.finditer(r'第\s*([0-9]+[a-z]?)\s*段', text):
             scanned += 1
             if m.group(1) not in labels:
                 bad.append((rel, m.group(1)))
+        # ② 段数声明：去掉①后扫裸「N 段」。
+        #    (?<!\d) 挡 Unicode 区段引用（如「2190 段」这类 4 位数）；{1,2} 同理兜一层。
+        residue = re.sub(r'第\s*[0-9]+[a-z]?\s*段', '', text)
+        for m in re.finditer(r'(?<!\d)(\d{1,2})\s*段', residue):
+            scanned += 1
+            if int(m.group(1)) != n_seg:
+                bad_count.append((rel, m.group(1)))
+
     rep.judge(not bad, 'seg',
-              '段号引用一致（扫描 %d 处引用，真实段标 %d 个：%s）'
-              % (scanned, len(labels), ' '.join(sorted(labels, key=_key)))
+              '段号引用一致（真实段标 %d 个：%s）'
+              % (len(labels), ' '.join(sorted(labels, key=_key)))
               if not bad else
               '%d 处「第 N 段」指向不存在的段标' % len(bad),
               '\n'.join('  %s → 第 %s 段（现有段标：%s）'
@@ -1298,6 +1309,13 @@ def seg_section_refs(root, rep):
                         for r, n in bad[:6]) +
               '\n段号是手写常量：拆分/新增段时必须同步改全部引用，'
               '或直接以段名相称（如「瘦身留痕段」）避免硬编码')
+    rep.judge(not bad_count, 'seg',
+              '段数声明一致（编号段 %d 个，扫描 %d 处引用/声明）' % (n_seg, scanned)
+              if not bad_count else
+              '%d 处段数声明与实际不符（实际编号段 %d 个）' % (len(bad_count), n_seg),
+              '\n'.join('  %s → 写着 %s 段' % (r, n) for r, n in bad_count[:6]) +
+              '\n段数声明同样会随拆分漂移，且生成物/生成器里的声明手改会被覆盖 —— '
+              '本仓「段数 12 实为 13」「OVERLAP 写共 14」两次都属此型')
 
 
 # ---------------------------------------------------------------- main

@@ -142,7 +142,7 @@ A 8480  +  B 1392  +  C 3815
 | 2 | `skill/scripts/build_ads.py` | `build/ads/ads-src.txt` + 审计（三支路合成） |
 | 3 | `skill/scripts/convert_ruleset.py` | 六份产物（三平台 × 拦截/放行） |
 
-🔒 **构建不联网**：第 3 段只读 `upstream/` 与 `build/`。上游要更新时，唯一允许联网的入口是 `freeze_upstream.py`，改动会留在 git diff 里可审计。这样「产物 == 生成链重跑」才是个能成立的断言，而不是对着远程源赌运气。
+🔒 **构建不联网**：构建链第 3 步只读 `upstream/` 与 `build/`。上游要更新时，唯一允许联网的入口是 `freeze_upstream.py`，改动会留在 git diff 里可审计。这样「产物 == 生成链重跑」才是个能成立的断言，而不是对着远程源赌运气。
 
 🔄 **转换语义**：
 
