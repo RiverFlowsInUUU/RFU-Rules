@@ -82,13 +82,28 @@ SEMANTIC = {
     "deviceid", "oaid", "imei", "idfa", "oneid", "umid", "msaid",
 }
 
-# strict 源的关键词（子串级）。比 SEMANTIC 宽，用于识别「名字里带广告语义词的
-# 平台域」（如 adkwai.com、pangolin-sdk-toutiao.com），同时灰产随机域不会命中。
-AD_SUBSTR = (
-    "ad", "ads", "kwai", "pangolin", "pangle", "gdt", "tanx", "alimama",
-    "csj", "gromore", "mobads", "umeng", "stat", "track", "log", "pcdn",
-    "p2p", "beacon", "collect", "cupid", "bytedance", "snssdk", "toutiao",
+# 平台关键词（子串级，但只在「平台名明显不会构成普通单词」时使用）。
+# ⚠️ 反面教训（2026-10-27 二次核查实证）：曾把 "ad" / "stat" / "log" 放进子串表，
+#    结果 static / bdstatic / download / prologue / nchanado 全被误收，
+#    造成 s.bdstatic.com、static-s.iqiyi.com 这类静态资源域被拦（页面挂图裂）。
+#    故 "ad"/"ads"/"stat"/"log" 等短词一律禁止做子串匹配，只允许 label 级精确匹配。
+PLATFORM_SUBSTR = (
+    "kwai", "pangolin", "pangle", "gromore", "mobads", "alimama",
+    "bytedance", "snssdk", "toutiao", "umeng", "tanx", "cupid",
 )
+
+# 静态资源 / 下载 / 状态类 label —— 出现且无广告语义时视为误收（用于断言）
+RESOURCE_TOKENS = {"static", "static-s", "statics", "download", "downloads",
+                   "sdownload", "status", "update", "upgrade"}
+
+# 已知必需域：任一缺失即判负。用于防「闸门全绿但实际改坏」。
+# 依据：本仓实测与登记（小鲸看看广告靠 cupid；快手/穿山甲/优量汇/友盟主域等）。
+MUST_CONTAIN = [
+    "cupid.iqiyi.com", "cupid.ptqy.gitv.tv", "adkwai.com",
+    "pangolin-sdk-toutiao.com", "api-access.pangolin-sdk-toutiao.com",
+    "gdt.qq.com", "e.qq.com", "umeng.com", "alog.umeng.com",
+    "ad.xiaomi.com", "analytics.126.net",
+]
 
 MULTI_SUFFIX = {
     "com.cn", "net.cn", "org.cn", "gov.cn", "edu.cn",
@@ -125,8 +140,41 @@ def climb(d):
     return d, False
 
 
+def label_tokens(label):
+    """把 label 按非字母边界切开，得到词元。ad-123 / adx_static / cupid 都能切。"""
+    return [t for t in re.split(r"[^a-z]+", label.lower()) if t]
+
+
 def has_semantic(d):
-    return any(seg in SEMANTIC for seg in d.split(".")[:-1])
+    """语义判定：label 的任一词元命中 SEMANTIC（词边界匹配，非子串）。
+
+    这样 static-s 切成 static/s 不命中；bdstatic 不命中；download 不命中；
+    而 ad.12306.cn / cupid.iqiyi.com / alog.umeng.com 正常命中。
+    """
+    for label in d.split(".")[:-1]:
+        for t in label_tokens(label):
+            if t in SEMANTIC:
+                return True
+    return False
+
+
+def has_platform(d):
+    return any(k in d for k in PLATFORM_SUBSTR)
+
+
+def is_resource(d):
+    """静态资源/下载类域判定。
+
+    以 static / download / status / update 开头的 label 视为资源域。
+    这类域即便成簇也不得入产物 —— 它们几乎都是内容素材 CDN
+    （实证：static-s.iqiyi.com、download.changhong.upgrade2.huan.tv），
+    拦掉会造成页面挂图裂 / 固件下载失败。
+    """
+    for label in d.split(".")[:-1]:
+        low = label.lower()
+        if low in RESOURCE_TOKENS or low.startswith(("static", "download", "sdownload", "status")):
+            return True
+    return False
 
 
 def under(d, aset):
@@ -189,12 +237,12 @@ def main():
         keep, by_cl, by_sem = set(), 0, 0
         for d in doms:
             clustered = cl[registrable(d)] >= 2
-            semantic = has_semantic(d) or any(k in d for k in AD_SUBSTR)
+            semantic = has_semantic(d) or has_platform(d)
             if clustered:
                 by_cl += 1
             if semantic:
                 by_sem += 1
-            if clustered or semantic:
+            if (clustered or semantic) and not (is_resource(d) and not has_semantic(d)):
                 keep.add(d)
         s["拦截 域名级(原始)"] = len(doms)
         s["  └ 成簇命中"] = by_cl
@@ -249,12 +297,18 @@ def main():
     if len(final) != len(set(final)):
         errs.append("产物存在重复")
     _cl = collections.Counter(registrable(d) for d in final)
-    _stray = [d for d in final
-              if _cl[registrable(d)] == 1
-              and not has_semantic(d)
-              and not any(k in d for k in AD_SUBSTR)]
-    if _stray:
-        errs.append("产物含 %d 条孤立且无语义条目（灰产准入失效）" % len(_stray))
+    # 断言（独立可失败，非同义反复）：
+    #   ① 静态资源/下载类域不得入产物（除非其命名本身含广告语义词元）
+    _res = [d for d in final if is_resource(d) and not has_semantic(d)]
+    if _res:
+        errs.append("产物含 %d 条静态资源/下载域（误收）例：%s" % (len(_res), _res[:3]))
+    #   ② 已知必需域必须在产物中（防「改坏了但闸门全绿」）
+    _missing = [d for d in MUST_CONTAIN if d not in set(final)]
+    if _missing:
+        errs.append("产物缺失已知必需域：%s" % _missing)
+    #   ③ 规模护栏（突变即报警，防止某次改动静默归零或爆炸）
+    if not (800 <= len(final) <= 3000):
+        errs.append("产物规模 %d 超出护栏 [800, 3000]" % len(final))
 
     # ── 输出 ─────────────────────────────────────────────────
     hdr = [
