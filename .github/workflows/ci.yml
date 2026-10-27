@@ -14,41 +14,32 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: 取上游源文件（第 6 段「产物可复现」的输入）
-        # ⚠️ 这一步不能省。verify_jinx_src.py 第 6 段要拿上游源文件重跑生成，
-        #    再与仓库里的产物逐字节比对 —— 源文件缺失时该段判 SKIP（退出码 3）。
-        #    若此处静默失败，CI 会长期以「SKIP」形态存在，即 SKILL.md 记录过的
-        #    「两半都恒空 = 永远绿的空操作」。故：下载失败即整步失败（curl -f）。
-        #    上游版本以详情文档记录的快照为准（当前 3.2.3 / 2026-10-18）；
-        #    上游向前滚动时，第 6 段会判负并提示重跑生成 —— 这正是它该做的事。
-        #    ⚠️ 看到红时的正确反应是「拉上游最新 → 重跑生成 → 推平文档」，见
-        #    skill/SKILL.md「上游滚动时的标准流程」；把本地源钉回旧版本让红变绿
-        #    是 2026-10-10 犯过的错，已写入 SKILL.md 存档。
-        run: |
-          mkdir -p jinx-rules && cd jinx-rules
-          for f in blacklist.txt blacklist_wildcard.txt whitelist.txt whitelist_wildcard.txt version.json; do
-            curl -fsSLO "https://raw.githubusercontent.com/VME98/jinx-rules/master/rules/$f"
-          done
-          echo "--- 上游版本 ---"
-          cat version.json
+      - name: ① 上游快照完整性（upstream/ vs manifest.json 的 sha256）
+        # 构建不联网：六个源全部入库在 upstream/，产物只由它们生成。
+        # 这一步确认快照没被手改 —— 手改上游等于悄悄换掉合并基线，
+        # 而 ② 只会照着被改过的源重跑、照样全绿，只有这里能发现。
+        # 失败即整步失败，不借 SKIP 蒙混（未验证 ≠ 绿）。
+        run: python skill/scripts/freeze_upstream.py --check
 
-      - name: 一致性断言（12 段 · 三格式等价 / 条数声明 / 上游版本号 / 产物可复现 / 合并基线 / 文案规范）
-        # 退出码：0=过 / 1=判负 / 2=环境不达标 / 3=SKIP（缺源文件）。
-        # CI 里 2 与 3 一律视为失败（保守）—— 未验证 ≠ 绿。
+      - name: ② 一致性断言（13 段 · 三格式等价 / 条数声明 / 产物可复现 / 快照自述）
+        # 退出码：0=过 / 1=判负 / 2=环境不达标 / 3=SKIP（缺 upstream/ 快照）。
+        # 上游已冻结、快照已入库，所以第 6 段在 CI 上一定真正执行；
+        # 出现 3 说明有人删了 upstream/ —— 视为失败。
         run: |
           set +e
-          python skill/tests/verify_jinx_src.py
+          python skill/tests/verify_products.py
           code=$?
           set -e
-          echo "verify_jinx_src.py exit=$code"
+          echo "verify_products.py exit=$code"
           if [ "$code" -ne 0 ]; then
             echo "::error::一致性断言未通过（exit $code）—— 2/3 视为失败：判据没有真正跑起来"
             exit 1
           fi
 
-      - name: 负样本自测（证明闸门本身能抓错，防空转）
-        # 一个只会全绿的闸门等于没有闸门。这一步在临时副本仓里制造 12 种典型
-        # 错误（手改产物 / 只改表头 / 跨格式差异 / 文档漂移 / 源头改了没重跑 /
-        # 文案违规 / 平台清单缺一端 / 表格 emoji 宽度 / 半同步拿旧版合并 /
-        # 文档版本号漂移 / 残缺上游快照），逐一要求断言脚本判负 —— 全部抓到才算过。
+      - name: ③ 负样本自测（证明闸门本身能抓错，防空转）
+        # 一个只会全绿的闸门等于没有闸门。这一步在临时副本仓里制造 13 种典型错误
+        # （手改产物 / 只改表头 / 跨格式差异 / 文档漂移 / 源头改了没重跑 / 文案违规 /
+        #  平台清单缺一端 ×2 / 表格 emoji 宽度 / 源与产物半同步 / 文档版本号漂移 /
+        #  残缺上游快照 / 手改 upstream 快照），逐一要求 ② 判负 —— 全部抓到才算过。
+        # ⚠️ 它要求先有绿基线：② 红了这里会拒绝出结论（exit 2）。
         run: python skill/tests/selftest_negative.py

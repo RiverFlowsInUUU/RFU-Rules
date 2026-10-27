@@ -59,12 +59,13 @@
 - ✅ `selftest_negative.py`：**13 抓到 / 0 漏报**，耗时 74s → **26s**
 - ✅ `freeze_upstream.py --check`：12 个文件 sha256 全一致
 
-**未完成（唯一一项，受权限阻塞）**
+**CI 工作流（本轮补完）**
 
-- ⏳ CI 工作流换版：改 `.github/workflows/` 需要 token 具备 `workflow` 权限，当前授权没有。
-  现由兼容垫片 `skill/tests/verify_jinx_src.py`（转发到 `verify_products.py`）维持旧 CI 绿色；
-  旧工作流仍在每次运行时下载上游明文，与「不再跟随上游」矛盾。
-  待 `gh auth refresh -h github.com -s workflow` 后一次性替换并删除垫片。
+- ✅ 取得 `workflow` 权限后换掉 `.github/workflows/ci.yml`，三步改为：
+  ① `freeze_upstream.py --check`（快照 sha256）→ ② `verify_products.py` → ③ `selftest_negative.py`。
+  **去掉了「每次运行下载上游明文」那一步** —— 构建已不联网，那步既多余，又与「不再跟随上游」矛盾。
+- 🗑️ 删除过渡用的兼容垫片 `skill/tests/verify_jinx_src.py`：它只做转发，
+  存在的唯一理由是旧工作流写死了旧文件名。
 
 ---
 
@@ -108,7 +109,7 @@
 
 - 📌 不再承诺「规则一条不增不减」—— `ads` 是合成集，与任何单一上游都不等长。改为三条：
   三端逐条等价 · 产物 == 生成链重跑结果 · 条数与文档一致。
-- 🔁 `verify_jinx_src.py` → **`verify_products.py`**（保留 12 段骨架）：数据源改仓内快照；
+- 🔁 `verify_jinx_src.py` → **`verify_products.py`**（保留 13 段骨架；当时文档误记为 12，本轮已纠正）：数据源改仓内快照；
   第 6 段 ads 侧先跑 `build_ads.py` 再跑 `convert_ruleset.py`；
   第 6b 段新增 **`upstream/` 全部文件 sha256 vs manifest** 校验（手改上游是唯一无法被
   「重跑一致」发现的失真）。
