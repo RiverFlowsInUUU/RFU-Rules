@@ -4,7 +4,7 @@
 > 生成依据：upstream/(A+B+C) · jinx 3.2.3 (2026-10-18)
 > CI 会独立复算并与此文件比对（verify_products.py 第 12 段 · 共 16 段），数字或清单不符即判负。
 
-**共 42 条**：28 条同域同名 + 14 条上层后缀覆盖（白名单共 49 条，其余 7 条与拦截集无关）。
+**共 42 条**：21 条同域同名 + 21 条上层后缀覆盖（白名单共 49 条，其余 7 条与拦截集无关）。
 
 ## 这是什么
 
@@ -29,7 +29,7 @@
 放行行无法用同一参数自救。给拦截行加上它，下面这 42 条会全部失效，
 表现出来就是推送收不到、微信登录转圈。
 
-## 一、同域同名（28 条）
+## 一、同域同名（21 条）
 
 拦截集里就有这一条，靠放行行先命中救回。
 
@@ -39,7 +39,6 @@
 | `apd-pcdnwxnat.teg.tencent-cloud.net` | 同名 |
 | `apd-pcdnwxstat.teg.tencent-cloud.net` | 同名 |
 | `appcfg.v.qq.com` | 同名 |
-| `aspect-upush.umeng.com` | 同名 |
 | `cactus.jd.com` | 同名 |
 | `cl-m.i4.cn` | 同名 |
 | `dypnsapi.aliyuncs.com` | 同名 |
@@ -52,30 +51,31 @@
 | `mssdk.bytedance.com` | 同名 |
 | `mssdk.volces.com.queniusz.com` | 同名 |
 | `nbfriend-mtop.cainiao.com` | 同名 |
-| `oneid.gepush.com` | 同名 |
-| `oneid.getui.net` | 同名 |
 | `pitaya.bytedance.com` | 同名 |
 | `pub-conf-m.i4.cn` | 同名 |
-| `sdk.open.talk.gepush.com` | 同名 |
-| `sdk.open.talk.getui.net` | 同名 |
-| `sdkapi.cloooud.com` | 同名 |
-| `sis.jpush.io` | 同名 |
 | `tnc3-aliec2.snssdk.com` | 同名 |
 | `tnc3-alisc1.snssdk.com` | 同名 |
 | `tnc3-bjlgy.snssdk.com` | 同名 |
 
-## 二、上层后缀覆盖（14 条）
+## 二、上层后缀覆盖（21 条）
 
 拦截集只有父域，子域被连带；同样靠放行行先命中。
 
 | 放行条目 | 覆盖它的拦截规则 |
 |:--|:--|
+| `aspect-upush.umeng.com` | `umeng.com` |
 | `gm.mmstat.com` | `mmstat.com` |
 | `iuni.telecome.cn` | `telecome.cn` |
+| `oneid.gepush.com` | `gepush.com` |
+| `oneid.getui.net` | `getui.net` |
 | `praisewindow.ugsdk.cn` | `ugsdk.cn` |
 | `s.jpush.cn` | `jpush.cn` |
+| `sdk.open.talk.gepush.com` | `gepush.com` |
+| `sdk.open.talk.getui.net` | `getui.net` |
+| `sdkapi.cloooud.com` | `cloooud.com` |
 | `seeds-sina.xycdn.com` | `xycdn.com` |
 | `sis-ipv6.jpush.cn` | `jpush.cn` |
+| `sis.jpush.io` | `jpush.io` |
 | `status-ipv6.jpush.cn` | `jpush.cn` |
 | `tsis-ipv6.jpush.cn` | `jpush.cn` |
 | `tsis.jpush.cn` | `jpush.cn` |

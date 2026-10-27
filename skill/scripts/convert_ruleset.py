@@ -151,7 +151,11 @@ def singbox_json(sb_suffix, sb_domain, sb_regex):
         rule['domain_suffix'] = sb_suffix
     if sb_regex:
         rule['domain_regex'] = sb_regex
-    doc = {'version': 5, 'rules': [rule]}
+    # version 2 = sing-box 1.10+（domain_suffix 二进制内存优化）。本集只用
+    # domain_suffix，用不着 version 5（= 1.14+ 的 package_name_regex）——
+    # 写 5 会把 1.10~1.13 稳定分支的用户全挡在门外（v10 审查二-4）。
+    # 官方版本表：sing-box.sagernet.org/configuration/rule-set/source-format
+    doc = {'version': 2, 'rules': [rule]}
     return json.dumps(doc, ensure_ascii=False, indent=2) + '\n'
 
 

@@ -18,7 +18,7 @@ agent_created: true
 | 性质 | **合成规则集** —— 三支路合并后裁剪 |
 | 上游 | 六个源全部落盘 `upstream/`，构建不联网；jinx 钉死 3.2.3，其余每周定时刷新 |
 | 产物 | 六份：三平台 × 拦截(`ads`) / 放行(`direct`) |
-| 现读数 | `ads 9535` / `direct 49` |
+| 现读数 | `ads 9122` / `direct 49` |
 
 ⚠️ **它不再是「上游的格式转换镜像」。** 2026-10-27 之前它只做格式转换、承诺「规则一条不增不减」；现在 `ads` 是三支路合成，与任何单一上游都不等长。这条承诺只对 `direct` 还成立。**改任何东西之前先分清你动的是哪一半。**
 
@@ -60,16 +60,22 @@ python skill/scripts/convert_ruleset.py --src build/ads --out . \
 **日常等价于一条：**
 
 ```bash
-bash skill/scripts/regen.sh          # 校验快照 → direct → ads → 闸门
+bash skill/scripts/regen.sh          # 校验快照 → direct → ads → 读数同步 → 闸门
 bash skill/scripts/regen.sh --build  # 只重建，不跑闸门
 ```
+
+⚠️ **读数同步（v10 审查缺陷 2）**：`regen.sh` 在闸门前跑 `sync_doc_counts.py`，
+把 README / SKILL / DetailsReadme 的条数声明对齐产物实际 —— 没有它，周更工作流
+会在上游条目一变时就死于第 5 段判负（有 diff 也提交不出去）。闸门不读同步脚本
+的输出、只对文件实际，同步错了照样红，不构成同构互保。模式清单与第 5 段锚点
+同源，改版式时两处一起改。
 
 落盘物：仓库根六份产物 + `OVERLAP.md`（白名单 × 拦截集重叠清单）+ `WHITELIST-SLIM.md`（白名单瘦身留痕）。
 后者不是附带产物 —— 那 40 来条域名只能靠「放行行更早命中」存活，
 消费端一旦把 REJECT 提前（Surge `pre-matching`），它们全部失效。所以它必须
 **入库、可被订阅者看到、被 CI 校验**，而不是躺在 gitignore 的 `build/` 里。
 
-预期读数：`ads 9535` / `direct 49`。⚠️ 这行读数随 `upstream/` 与判据变化，写完必跑闸门核对 —— 它同时校验文档声明与产物实际。
+预期读数：`ads 9122` / `direct 49`。⚠️ 这行读数随 `upstream/` 与判据变化，写完必跑闸门核对 —— 它同时校验文档声明与产物实际。
 
 ⚠️ `--src` 的写法会**原样进产物表头**（`# source: build/ads` / `# source: upstream/jinx-3.2.3`）。这两条命令写法本就不同，**不是笔误**；别为了「统一」给其中一条加 `./`，否则表头变、第 6 段立刻判负。
 

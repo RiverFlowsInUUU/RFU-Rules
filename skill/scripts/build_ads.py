@@ -137,6 +137,20 @@ MUST_CONTAIN = [
     "gdt.qq.com", "e.qq.com", "umeng.com", "alog.umeng.com",
     "ad.xiaomi.com", "analytics.126.net",
 ]
+# 反向熔断清单（v10 审查三-2 / 缺陷 3）：任一条**精确**出现在产物即判非零退出。
+# 两类成员，各防一种事故：
+#   · 民生根域 —— 上游投毒/合并失误把整域收进黑名单时，构建当场失败，
+#     而不是带着「全国断网级」条目发布。只判精确命中：拦
+#     hectorstatic.baidu.com 这类**子域**是正常业务，不在此列。
+#   · 规矩 5 反面实证钉子 —— 独立于 is_resource 判据的具体域。判据与断言
+#     同构时（SKILL「断言最容易犯的错」）互相看不见失真，钉子看得见。
+MUST_NOT_BLOCK = {
+    "baidu.com", "qq.com", "weixin.qq.com", "alipay.com", "taobao.com",
+    "tmall.com", "jd.com", "apple.com", "microsoft.com", "google.com",
+    "bilibili.com", "weibo.com", "163.com", "sohu.com", "douyin.com",
+    "zhihu.com",
+    "s.bdstatic.com", "static-s.iqiyi.com",
+}
 # 覆盖率断言基线必须独立于支路来源，否则是同义反复。
 # 曾用 Jinx 当基线而 Jinx 本身是 C 支路 → 91.5% 等于自证。
 # ⚠️ 这两个护栏是「防抖」用的，加源/改判据后要跟着调 —— 命令行可覆盖，
@@ -146,7 +160,15 @@ SIZE_RANGE = (5000, 15000)
 
 MULTI_SUFFIX = {
     "com.cn", "net.cn", "org.cn", "gov.cn", "edu.cn",
-    "com.hk", "com.tw", "co.jp", "co.uk", "com.au", "com.sg",
+    "com.hk", "org.hk", "net.hk", "com.tw", "org.tw", "co.jp",
+    "ne.jp", "co.uk", "com.au", "com.sg", "com.mo", "co.kr", "or.kr",
+    # 中国省级行政区二级域（v10 审查二-3）：缺了它们，x.sh.cn 会被
+    # registrable() 错当成「主域 = sh.cn」，灰产判据与成簇统计随之失真。
+    "bj.cn", "tj.cn", "sh.cn", "cq.cn", "he.cn", "sx.cn", "ln.cn",
+    "jl.cn", "hl.cn", "js.cn", "zj.cn", "ah.cn", "fj.cn", "jx.cn",
+    "sd.cn", "ha.cn", "hb.cn", "hn.cn", "gd.cn", "gx.cn", "sc.cn",
+    "gz.cn", "yn.cn", "xz.cn", "sn.cn", "gs.cn", "qh.cn", "nx.cn",
+    "xj.cn",
 }
 
 
@@ -208,7 +230,14 @@ def is_gray_random(d: str, cluster_size: int, semantic: bool) -> bool:
 
 
 def climb(d: str) -> tuple[str, bool]:
-    """语义上提：从右往左找第一个语义 label，提到此为止，绝不越过归属域。"""
+    """语义上提：从左往右找第一个语义 label，提到此为止，绝不越过归属域。
+
+    ⚠️ 方向是**左优先**（v10 审查二-1：docstring 曾写「从右往左」，与实现不符，
+    如实改注释）。左命中即返回 = 上提最少 = 保守方向；若改右优先（更激进，
+    如 ad.track.x.com → track.x.com），拦截面会扩大，属判据级变更，须单独评审。
+    归属域边界按「末尾两段」近似，对三段式 ccTLD 理论上存在把 SLD 当边界的
+    空档（v10 审查二-1.3）；现行词表无会命中该位置的词根，暂不为此加复杂度。
+    """
     labels = d.split(".")
     for i in range(len(labels) - 2):
         if labels[i] in SEMANTIC:
@@ -328,7 +357,7 @@ def parse_direct_product() -> set:
 
 # ────────────────────────────── 主流程
 
-def render_overlap(same, above, climbed, n_direct, label_text):
+def render_overlap(same, above, ads_final, n_direct, label_text):
     """渲染 OVERLAP.md —— 白名单与拦截集的重叠清单。
 
     为什么要落盘：这份清单此前只出现在 build/ads/ads-audit.txt，而 build/ 被
@@ -391,7 +420,7 @@ def render_overlap(same, above, climbed, n_direct, label_text):
         "|:--|:--|",
     ]
     for g in above:
-        owners = sorted(d for d in climbed if d != g and under(g, {d}))
+        owners = sorted(d for d in ads_final if d != g and under(g, {d}))
         lines.append("| `%s` | %s |" % (g, " / ".join("`%s`" % o for o in owners[:2])))
 
     lines += [
@@ -467,7 +496,9 @@ def main() -> int:
 
     res_drop = {d for d in after_exc if is_resource(d) and not has_semantic(d)}
     fn_drop = {d for d in after_exc if is_function_domain(d)}
-    after_fn = after_exc - res_drop - fn_drop
+    # 硬熔断：MUST_NOT_BLOCK 里的精确域无条件出局，不受语义/成簇豁免（v10）。
+    hard_drop = {d for d in after_exc if d in MUST_NOT_BLOCK}
+    after_fn = after_exc - res_drop - fn_drop - hard_drop
 
     cl = collections.Counter(registrable(d) for d in after_fn)
     gray_drop = {d for d in after_fn
@@ -482,13 +513,26 @@ def main() -> int:
         if did:
             climb_log.append((d, out))
 
+    # ── 后缀剪枝（v10 审查缺陷 4）────────────────────────────────
+    # DOMAIN-SUFFIX 语义：父域命中 ⇒ 其全部子域命中。父域已在集内时，子域行
+    # 是纯冗余（实测 412 条 / 4.3%）—— 剪除不改变任何拦截行为（四端语义一致），
+    # 只省体积与审计噪声。剪枝必须在 direct 顺序分析**之前**：
+    # ov_same/ov_above 的口径是「final 里的 ads」，口径错了 OVERLAP 分类会虚增同名。
+    pruned, prune_log = set(), []
+    for d in sorted(climbed, key=lambda x: (len(x.split(".")), x)):
+        parts = d.split(".")
+        if any(".".join(parts[i:]) in pruned for i in range(1, len(parts))):
+            prune_log.append(d)
+        else:
+            pruned.add(d)
+
     direct = parse_direct_product()
     # direct 与 ads 的关系是「顺序」而非「删除」：direct 排在拦截集之前，
     # 更具体的规则先命中 DIRECT，功能域自然获救。此处只报告，不删上层域。
-    shadowed_direct = sorted(g for g in direct if under(g, climbed))
-    ov_same = [g for g in shadowed_direct if g in climbed]
-    ov_above = [g for g in shadowed_direct if g not in climbed]
-    final = sorted(climbed)
+    shadowed_direct = sorted(g for g in direct if under(g, pruned))
+    ov_same = [g for g in shadowed_direct if g in pruned]
+    ov_above = [g for g in shadowed_direct if g not in pruned]
+    final = sorted(pruned)
 
     # 产物表头 `# source:` 的文案。为什么由这里出而不是写死在 regen.sh / verify：
     # 两处各写一遍必然漂移，而表头不一致会被第 6 段当成"产物不可复现"报错。
@@ -530,7 +574,13 @@ def main() -> int:
     _res = [d for d in final if is_resource(d) and not has_semantic(d)]
     if _res:
         errs.append("产物含静态资源域 %d 条，例：%s" % (len(_res), _res[:3]))
-    _missing = [d for d in MUST_CONTAIN if d not in fset]
+    _forbidden = [d for d in final if d in MUST_NOT_BLOCK]
+    if _forbidden:
+        errs.append("产物含熔断清单域名 %d 条：%s" % (len(_forbidden), _forbidden[:5]))
+    # 必需域按「覆盖」语义判（v10）：剪枝后子域条目被父域连带是预期行为，
+    # 只要该域仍会命中拦截（自身在集，或任一父域在集）即算在位 —— 精确命中
+    # 会把「被父域覆盖」误报成缺失。
+    _missing = [d for d in MUST_CONTAIN if d not in fset and not under(d, fset)]
     if _missing:
         errs.append("产物缺失已知必需域：%s" % _missing)
     if not direct:
@@ -568,7 +618,9 @@ def main() -> int:
         "  静态资源剔除               : -%d" % len(res_drop),
         "  功能域剔除                 : -%d" % len(fn_drop),
         "  灰产随机长尾剔除           : -%d" % len(gray_drop),
+        "  硬熔断（MUST_NOT_BLOCK）    : -%d" % len(hard_drop),
         "  语义上提后                 : %d" % len(climbed),
+        "  后缀剪枝（父域已覆盖）      : -%d" % len(prune_log),
         "  最终产物                   : %d" % len(final),
         "",
         "五、覆盖率",
@@ -583,8 +635,8 @@ def main() -> int:
         "六、与 direct 放行清单的重叠（不删除，靠顺序保护）",
     ]
     if shadowed_direct:
-        same = [g for g in shadowed_direct if g in climbed]
-        above = [g for g in shadowed_direct if g not in climbed]
+        same = [g for g in shadowed_direct if g in pruned]
+        above = [g for g in shadowed_direct if g not in pruned]
         audit.append("  共 %d 条 direct 条目落在产物的拦截范围内：" % len(shadowed_direct))
         audit.append("  ⚠️ 必须确保 direct 规则集排在拦截集**之前**，否则这些功能域会被拦")
         audit.append("     （推送 / 登录会直接失效）。")
@@ -594,7 +646,7 @@ def main() -> int:
             audit.append("     %s" % g)
         audit.append("  ── 被上层后缀覆盖（产物只有父域，靠顺序救子域）：%d 条" % len(above))
         for g in above:
-            owners = sorted(d for d in climbed if d != g and under(g, {d}))
+            owners = sorted(d for d in pruned if d != g and under(g, {d}))
             audit.append("     %-44s ← 被 %s 覆盖" % (g, owners[:2]))
     else:
         audit.append("  无重叠")
@@ -602,7 +654,7 @@ def main() -> int:
     audit += ["  %-48s -> %s" % (s, d) for s, d in sorted(climb_log)]
     audit += ["", "八、断言"]
     audit += ["  FAIL " + e for e in errs] or [
-        "  PASS 形态 / 静态资源 / 必需域 / direct 非空 / 覆盖率 / 规模 / 无重复 —— 全部通过"]
+        "  PASS 形态 / 静态资源 / 熔断清单 / 必需域 / direct 非空 / 覆盖率 / 规模 / 无重复 —— 全部通过"]
 
     if args.dry_run:
         print("\n".join(audit))
@@ -620,7 +672,7 @@ def main() -> int:
 
     if args.overlap:
         Path(args.overlap).write_text(
-            render_overlap(ov_same, ov_above, climbed, len(direct), label_text),
+            render_overlap(ov_same, ov_above, pruned, len(direct), label_text),
             encoding="utf-8", newline="")
     print("ads 域名集 %d 条 -> %s" % (len(final), args.out))
     print("审计 -> %s" % args.audit)

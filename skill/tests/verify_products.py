@@ -711,7 +711,8 @@ def seg_reproducible(root, rep, counts=None):
         if build.is_file():
             proc = subprocess.run(
                 [sys.executable, str(build), '--out', str(ads_src_dir / 'ads-src.txt')],
-                cwd=str(root), capture_output=True, text=True)
+                cwd=str(root), capture_output=True, text=True,
+                encoding='utf-8', errors='replace')  # Windows 默认 cp936，子进程输出 UTF-8（v10 缺陷1）
             if proc.returncode != 0:
                 build_ok = False
                 rep.judge(False, 'repro', 'build_ads.py 构建失败（exit %d）' % proc.returncode,
@@ -732,7 +733,8 @@ def seg_reproducible(root, rep, counts=None):
             if fam == 'ads':
                 lab = (ads_src_dir / 'label.txt').read_text(encoding='utf-8').strip()
                 cmd += ['--label', lab]
-            proc = subprocess.run(cmd, cwd=str(root), capture_output=True, text=True)
+            proc = subprocess.run(cmd, cwd=str(root), capture_output=True, text=True,
+                                  encoding='utf-8', errors='replace')  # 同上（v10 缺陷1）
             if proc.returncode != 0:
                 rep.judge(False, 'repro', f'{fam}: 重跑生成失败（exit {proc.returncode}）',
                           (proc.stderr or proc.stdout or '')[-400:])

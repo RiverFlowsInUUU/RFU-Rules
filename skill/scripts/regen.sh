@@ -50,6 +50,13 @@ echo "== 3/4 ads 产物（→ mihomo / Surge / sing-box）=="
     --extra custom-ads.list
 
 echo
+echo "== 3.5/4 文档读数同步（构建器管产物，本步管读数，闸门随后独立复核）=="
+# 周更自动化的一半（v10 审查缺陷 2）：上游条目变化 → 产物条数变化 →
+# README/SKILL/Details 的手写读数若不同步，第 5 段必判负，有 diff 也提交不出去。
+# verify 不读本脚本的输出、只对文件实际，同步错了照样红 —— 不构成同构互保。
+"$PY" skill/scripts/sync_doc_counts.py
+
+echo
 if [ "${1:-}" = "--build" ]; then
   echo "== 只构建，跳过校验 =="
   echo "⚠️ 本次产物未经双闸门校验 —— 提交前请补跑 bash skill/scripts/regen.sh（不带 --build）"

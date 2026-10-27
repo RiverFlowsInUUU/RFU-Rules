@@ -35,7 +35,9 @@ A 8480  +  B 1392  +  C 3815
   静态资源剔除          -60
   功能域剔除           -349
   灰产随机长尾剔除    -1934
-  语义上提后           9535   ← 最终交付
+  语义上提后           9534
+  后缀剪枝             -412
+  最终交付             9122
 ```
 
 ⚖️ **为什么必须三支路**：只用 B 支路时对 Jinx·中国生态的覆盖率是 46.8%。拆开数了一遍，缺口里 **85% 不是被筛掉，而是那 5 个源里根本没有**（`a.alimama.cn`、`acookie.alimama.com` 之类）。lite 是 16 源浓缩的另一条路线，Jinx 是第三条，三者互补——并联后覆盖率 95.4%。
@@ -61,11 +63,11 @@ A 8480  +  B 1392  +  C 3815
 
 | 客户端 | 文件 | 格式 | 条数 | 用途 |
 |:-------|:-----|:-----|-----:|:-----|
-| mihomo / OpenClash | `mihomo-ads.yaml` | `classical` | 9535 | 拦截 |
+| mihomo / OpenClash | `mihomo-ads.yaml` | `classical` | 9122 | 拦截 |
 | mihomo / OpenClash | `mihomo-direct.yaml` | `classical` | 49 | 放行 |
-| Surge / Egern | `surge-ads.list` | `RULE-SET` / `rule_set` | 9535 | 拦截 |
+| Surge / Egern | `surge-ads.list` | `RULE-SET` / `rule_set` | 9122 | 拦截 |
 | Surge / Egern | `surge-direct.list` | `RULE-SET` / `rule_set` | 49 | 放行 |
-| sing-box | `sing-box-ads.json` | `source` | 9535 | 拦截 |
+| sing-box | `sing-box-ads.json` | `source` | 9122 | 拦截 |
 | sing-box | `sing-box-direct.json` | `source` | 49 | 放行 |
 
 🔵 **Egern 复用 Surge 那份文件**：两者规则集格式同源（`DOMAIN-SUFFIX` / `DOMAIN` 逐字相同），无需独立产物。引用位置有两处：`rules` 段的 `rule_set`（连接阶段）、`forward` 段的 `proxy_rule_set`（DNS 阶段）。依据：姊妹仓 [Self-Configuration](https://github.com/RiverFlowsInUUU/Self-Configuration) 四份现役 Egern profile 均如此引用，并将这两份登记为「共用规则集」。
@@ -152,7 +154,7 @@ A 8480  +  B 1392  +  C 3815
 | 放行集 `x.com` | 仅精确，不继承子域 | `DOMAIN` | `DOMAIN` | 同 Surge | `domain` |
 | 放行集 `*.x.com` | 该域 + 全部子域 | `DOMAIN-SUFFIX` | `DOMAIN-SUFFIX` | 同 Surge | `domain_suffix` |
 
-- 🎯 **本仓产物已无通配**：拦截集 9535 条全部是 `DOMAIN-SUFFIX`，`DOMAIN-REGEX` / `DOMAIN-WILDCARD` 为 0。上游里那些内嵌星号规则（159 条）在 DNS 层无法表达，已在构建阶段丢弃并计数；能无损降为后缀的（105 条 `*.x.com`）则降为后缀 —— 于是三端语义天然一致，不需要写法映射。
+- 🎯 **本仓产物已无通配**：拦截集 9122 条全部是 `DOMAIN-SUFFIX`，`DOMAIN-REGEX` / `DOMAIN-WILDCARD` 为 0。上游里那些内嵌星号规则（159 条）在 DNS 层无法表达，已在构建阶段丢弃并计数；能无损降为后缀的（105 条 `*.x.com`）则降为后缀 —— 于是三端语义天然一致，不需要写法映射。
 - 🌳 `DOMAIN-SUFFIX` / `domain_suffix` 覆盖整个子域树；误杀用白名单放行。
 - 🧱 仅域名级拦截，同域内嵌广告需 MITM / URL 级规则。
 - ⏭️ 上游 `url_*` / `mitm_skip_domains` 依赖 MITM 上下文，未转换。
@@ -161,7 +163,7 @@ A 8480  +  B 1392  +  C 3815
 🔬 **sing-box 侧的语义实证**（内核 1.14.2 · 2026-09-28）：
 
 - 📐 `domain_suffix: ["example.com"]`（不带点）命中自身 + 全部子域，**域段级边界**（`aexample.com` 不误命中）—— 实证 `sagernet/sing` 的 `common/domain/matcher.go`：trie 按「`.` 段边界 + 叶子」判定，与 mihomo `DOMAIN-SUFFIX` 等价；前导点写法 `.example.com` 才是「仅子域、不含自身」，本仓不用。
-- 🧊 文件是 rule-set 的 **source 格式**（JSON，`"version": 5`），不是二进制 `.srs` —— 远程规则集 `format: "source"` 直接消费，订阅即用无需本地编译。
+- 🧊 文件是 rule-set 的 **source 格式**（JSON，`"version": 2` = sing-box 1.10+；本集只用 `domain_suffix`，不需要 5 = 1.14+ 的专有字段，写 5 会把 1.10~1.13 的用户挡在门外），不是二进制 `.srs` —— 远程规则集 `format: "source"` 直接消费，订阅即用无需本地编译。
 
 ---
 
