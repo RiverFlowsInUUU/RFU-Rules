@@ -196,7 +196,7 @@ RFU-Rules/
 ├── 🏗️ build/           # 三支路合成的中间结果（gitignore，不入库；产物在根目录）
 ├── 🧪 skill/
 │   ├── 📄 scripts/     # freeze_upstream.py · build_ads.py · convert_ruleset.py · regen.sh
-│   └── ✅ tests/       # verify_products.py（14 段断言）· selftest_negative.py（负样本）
+│   └── ✅ tests/       # verify_products.py（15 段断言）· selftest_negative.py（负样本）
 ├── 🔁 .github/         # CI：每次提交自动跑上述两个脚本
 ├── 📐 .gitattributes   # 全仓文本 eol=lf（跨平台产物逐字节可复现）
 └── 📁 DetailsReadme/   # 本文档
@@ -208,7 +208,7 @@ RFU-Rules/
 
 ## ✅ 8 一致性保证与验收
 
-🧱 本仓对外承诺三条：**三端逐条等价、产物只能由生成链产出、条数与文档一致**。它由 `.github/workflows/ci.yml` 在每次 push / PR 自动校验，闸门是 [`skill/tests/verify_products.py`](../skill/tests/verify_products.py)（14 段）：
+🧱 本仓对外承诺三条：**三端逐条等价、产物只能由生成链产出、条数与文档一致**。它由 `.github/workflows/ci.yml` 在每次 push / PR 自动校验，闸门是 [`skill/tests/verify_products.py`](../skill/tests/verify_products.py)（15 段）：
 
 | 段 | 守什么 |
 |:-:|:-------|
@@ -220,6 +220,7 @@ RFU-Rules/
 | 5b | 文档声明的**上游版本号与快照日期** == `upstream/jinx-3.2.3/version.json` |
 | 6 | **产物 == 生成链重跑结果**（先跑构建器，再跑转换器） |
 | 6b | 冻结快照自述计数 == 源文件实际；且 `upstream/` 全部文件 sha256 与 manifest 一致 |
+| 6c | `WHITELIST-SLIM.md` == 独立复算：摘要三项（总/留/裁）+ 保留、裁掉两个集合逐条相等 |
 | 7 | `custom-*.list` 的表头声明与实际条数一致，且每条都真的落进产物 |
 | 8 | 文案规范：emoji 只在行首结构位 + 密度下限 |
 | 9 | 行尾符与 BOM |

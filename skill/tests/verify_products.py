@@ -24,7 +24,7 @@ direct 仍由上游白名单瘦身而来。两者都只读 `upstream/`，**构�
   python skill/tests/verify_products.py          # 在仓根执行
   python skill/tests/verify_products.py --root . # 显式指定仓根
 
-断言清单（14 段，执行顺序）:
+断言清单（15 段，执行顺序）:
   1. 六份产物存在且非空
   2. 三格式条数一致（ads 三份互等 / direct 三份互等）
   3. 跨格式语义等价（归一化后逐条比对，不是只比条数）
@@ -35,18 +35,21 @@ direct 仍由上游白名单瘦身而来。两者都只读 `upstream/`，**构�
   6. 产物 == 生成链重跑的结果（ads 先跑 build_ads.py，再跑 convert_ruleset.py）
  6b. 冻结上游自述自检：version.json 自述计数 == 源文件实际（挡「快照被裁过 /
      只取到半个」），并显式列出 direct 应有的条数。
+ 6c. 白名单瘦身留痕（WHITELIST-SLIM.md）== 独立复算 —— 摘要三项（总/留/裁）
+     + 保留集合、裁掉集合逐条相等。判据对象是「生成物」，不是上游自述，
+     故与 6b 分段（v4 审查 4.2：段标与内容漂移，本仓第三次踩这类坑）。
   7. 源头文件（custom-*.list）的表头 extra 声明与实际条数一致
   8. 文案规范：emoji 只出现在行首 + 密度下限
   9. 行尾符与 BOM（BOM 硬判负；行尾只做同族一致性与事实播报）
  10. 平台清单齐备 —— 面向外部的说明（仓库简介来源 / README / DetailsReadme / SKILL）
      必须列全所有平台。实证：sing-box 曾从仓库简介里漏了一周无人发现。
- 12. 白名单 × 拦截集重叠清单（OVERLAP.md）与当前产物一致 —— 独立复算，
-     防「清单写的和产物算的不是一回事」。这是本仓唯一对外可见的风险清单。
  11. 表格内 emoji 宽度一致 —— 同一表格的 emoji 码位数必须相同，
      否则带 U+FE0F 的那个会占两格、该行在宽字符字体下错位。
+ 12. 白名单 × 拦截集重叠清单（OVERLAP.md）与当前产物一致 —— 独立复算，
+     防「清单写的和产物算的不是一回事」。这是本仓唯一对外可见的风险清单。
 
 闸门自身可信度由 skill/tests/selftest_negative.py 保证：它在临时副本仓里
-制造 12 种典型错误，要求本脚本逐一判负 —— 防止闸门退化成「永远绿的空操作」。
+制造 18 种典型错误，要求本脚本逐一判负 —— 防止闸门退化成「永远绿的空操作」。
 其中每条负样本都经过「拆掉对应判据后必须翻红」的独立性反证，确保它是真的在
 测那一盘守卫，而不是靠另一次判负顺带被「抓到」。
 
@@ -525,10 +528,13 @@ def seg_upstream_pin(root, rep, counts, repro_failed=0):
               'direct 不是由当前白名单 + custom-direct.list 生成的 —— '
               '重跑 bash skill/scripts/regen.sh')
 
-    # 瘦身留痕（WHITELIST-SLIM.md）与独立复算比对（v3 审查发现 5.2）。
+    # 瘦身留痕（WHITELIST-SLIM.md）与独立复算比对（v3 审查发现 5.2，v4 拆为独立段 6c）。
     # 279 条被裁的白名单此前只打印在 stdout、仓内零记录；现在落盘了，
     # 就必须被校验 —— 否则它和产物一样可能"声称 ≠ 实际"。
     # 判据：摘要三项（总/留/裁）+ 保留集合、裁掉集合逐条相等（不复用 convert 的结果）。
+    # ⚠️ 本段原先挤在 6b 里，而 6b 的段标是「冻结上游自述 == 源文件实际」——
+    #    瘦身留痕比对的是「生成物 == 独立复算」，跟上游自述不是一回事（v4 审查 4.2）。
+    rep.section('6c. 白名单瘦身留痕（WHITELIST-SLIM.md）== 独立复算')
     slim = root / 'WHITELIST-SLIM.md'
     if not slim.is_file():
         rep.judge(False, 'pin', 'WHITELIST-SLIM.md 缺失',
@@ -680,7 +686,6 @@ def seg_reproducible(root, rep, counts=None):
     script = root / 'skill' / 'scripts' / 'convert_ruleset.py'
     srcdir = root / SRC_DIR
     if not script.is_file():
-        rep.section('6. 产物可复现（源头重跑）')
         rep.rows.append((None, 'SKIP: 6. 产物可复现', '', ''))
         return 'skip'
     if not srcdir.is_dir():
