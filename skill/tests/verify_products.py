@@ -633,7 +633,7 @@ def seg_upstream_pin(root, rep, counts, repro_failed=0):
 def seg_upstream_doc(root, rep):
     """文档里声明的上游版本号/快照日期必须等于冻结快照的 version.json。
 
-    上游已冻结，这不再是「跟不跟得上」的问题，而是**门面读数对不对**：
+    jinx 钉死在 3.2.3、其余源每周滚动，但门面读数仍必须与快照自述一致：
     产物换了、徽章还写着旧版本，读者据以判断的数据就是假的 —— 而条数断言
     照样可能全绿（条数与产物自洽）。
     """
@@ -650,8 +650,8 @@ def seg_upstream_doc(root, rep):
         ('README.md', 'README 冻结徽章',
          r'badge/Frozen-Jinx%20([0-9][0-9.]*)', version),
         ('README.md', 'README 上游快照行',
-         r'\| 📌 上游快照 \| 冻结于 `([0-9][0-9.]*)` · `(\d{4}-\d{2}-\d{2})` \|',
-         (version, date)),
+         r'\| 📌 上游快照 \| jinx 钉死 `([0-9][0-9.]*)` · 其余每周刷新 \|',
+         version),
         ('README.md', 'README 来源表基线行',
          r'\[VME98/jinx-rules\]\(https://github\.com/VME98/jinx-rules\)[^\n]*?数据 `([0-9][0-9.]*)`（(\d{4}-\d{2}-\d{2}) 冻结）',
          (version, date)),
@@ -1257,6 +1257,9 @@ def seg_section_refs(root, rep):
         （编号段 = 段标去掉前置 0 后的个数）。「段数 12 实为 13」「OVERLAP 写共 14」
         这两类已发生过的漂移都属此型 —— 其中生成物/生成器里的声明手改会被覆盖，
         此前完全无人守。
+      ③ 枚举守卫（v8 审查 2.1）：②型只扫 DECL_FILES，而 DECL_FILES 是手写清单
+        —— 清单漏登记，声明就静默逃逸（v8 实测：新文件写「共 N 段」假数全绿通过）。
+        故仓内凡出现段数声明形态的文件必须登记在 DECL_FILES，未登记即判负。
     扫描排除 CHANGELOG 历史记录、upstream/、build/、.git/。
     """
     rep.section('13. 段号引用与段数声明 == 真实段标/段数')
@@ -1283,6 +1286,15 @@ def seg_section_refs(root, rep):
         '.github/workflows/ci.yml',
     }
     bad, bad_count, scanned = [], [], 0
+    unregistered = []
+    # ③型的「声明形态」触发器（v8 审查 2.1）。只当枚举触发器用（文件级命中），
+    # 不做数值判定 —— 数值仍由②型在声明位文件里管。形态刻意收窄：
+    # 正常中文「分三段讲清楚」不匹配，措辞税不回来；模式表只有 3 条，自身不易漂。
+    DECL_TRIGGERS = (
+        r'共\s*\d{1,2}\s*段',
+        r'\d{1,2}\s*段断言',
+        r'清单\s*[（(]\s*\d{1,2}\s*段',
+    )
     for p in root.rglob('*'):
         if not p.is_file():
             continue
@@ -1302,6 +1314,12 @@ def seg_section_refs(root, rep):
             scanned += 1
             if m.group(1) not in labels:
                 bad.append((rel, m.group(1)))
+        # ③ 枚举守卫（v8 审查 2.1）：DECL_FILES 是手写清单，清单自己也要有守卫 ——
+        #    否则新文件里的段数声明静默逃逸，正是本仓最忌讳的「手写清单 + 无枚举守卫」
+        #    形态（第 10 段的五处清单守卫是同一手法的现成先例）。
+        if rel not in DECL_FILES and any(re.search(t, text) for t in DECL_TRIGGERS):
+            unregistered.append(rel)
+            continue
         # ② 段数声明：只扫「声明位文件」里的裸「N 段」（v7 审查 2.1）。
         #    全文一刀切是措辞税 —— 「分三段讲清楚」这类正常中文会被判红，
         #    误报多了人会绕着判据写文档，它就变成下一个没人看的地方。
@@ -1331,6 +1349,14 @@ def seg_section_refs(root, rep):
               '\n'.join('  %s → 写着 %s 段' % (r, n) for r, n in bad_count[:6]) +
               '\n段数声明同样会随拆分漂移，且生成物/生成器里的声明手改会被覆盖 —— '
               '本仓「段数 12 实为 13」「OVERLAP 写共 14」两次都属此型')
+    rep.judge(not unregistered, 'seg',
+              '段数声明枚举守卫通过（声明位 %d 个，无未登记的声明形态）' % len(DECL_FILES)
+              if not unregistered else
+              '%d 个文件出现段数声明形态但未登记 DECL_FILES' % len(unregistered),
+              '\n'.join('  ' + r for r in unregistered[:6]) +
+              '\nDECL_FILES 是手写清单，清单自己必须有枚举守卫（v8 审查 2.1）：'
+              '要么把文件加进 seg_section_refs 的 DECL_FILES（它确属声明位），'
+              '要么改措辞避开声明形态')
 
 
 # ---------------------------------------------------------------- main
