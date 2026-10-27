@@ -1,10 +1,10 @@
 # 中文广告 / 统计 / 隐私 / PCDN 域名规则集（由脚本生成，请勿手改）
-# 生成器: test/build-cn-adblock.py（v4 三支路）
+# 生成器: test/build-cn-adblock.py（v5 三支路 · 源快照可复现）
 # 支路 A: 217heidai adblocksurgelite.list（全量 16 源 ∩ china.txt）
 # 支路 B: AWAvenue · CJX · xinggsf · AdGuard_Chinese_filter · jiekouAD
 # 支路 C: 本仓 Jinx 3.2.3（上游已转加密发布，此快照冻结、不漂移）
 # 规矩: 仅 DNS 层可表达 · 纯 DOMAIN-SUFFIX 无通配 · 只拦域名不拦 IP
-#       静态资源/功能域硬排除 · @@ 例外只做减法 · guard 条目零覆盖
+#       静态资源/功能域硬排除 · @@ 例外只做减法 · jinx-direct 条目零覆盖
 # 规模: 9276 条
 0001-metrics1-drcn-dt-dbankcloud-cn.geac.dbankedge.cn
 0002-metrics1-drcn-dt-dbankcloud-cn.geac.dbankedge.cn

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""build-cn-adblock.py —— 中文广告 / 统计 / 隐私 / PCDN 域名规则集构建器（v4 三支路）
+"""build-cn-adblock.py —— 中文广告 / 统计 / 隐私 / PCDN 域名规则集构建器（v5 三支路）
 
 版本演进（每次都是核查后推翻前一版的错误假设，保留在此供追溯）
 ================================================================
@@ -8,8 +8,8 @@ v2（单支路 · 5 源）：1,341 条，覆盖 Jinx·中国 46.8%。
     错在「源选错」——85% 的缺口不是被筛掉，而是那 5 源里根本没有。
 v3（双支路 · lite + 5 源）：7,108 条，覆盖 70.6%。
     补上了源覆盖，但留下两个缺陷：
-    ① **guard 冲突检测方向反了**（查"产物条目是否在 guard 里"，
-       应为"guard 条目是否被产物覆盖"）→ `getui.net` / `gepush.com` 整域留存，
+    ① **jinx-direct 冲突检测方向反了**（查"产物条目是否在 jinx-direct 里"，
+       应为"jinx-direct 条目是否被产物覆盖"）→ `getui.net` / `gepush.com` 整域留存，
        个推推送会被拦，用户可感知故障。
     ② A 支路（lite）未做功能域过滤 → 带入 `c.uaa.iqiyi.com`（统一账号认证）、
        `cm.passport.iqiyi.com`（登录）、`doh.iqiyi.com` 等 449 条功能域。
@@ -29,7 +29,7 @@ v4（三支路 · lite + 5 源 + Jinx）：约 9,300 条，覆盖 Jinx·中国 9
    api / sdk 等功能词元、且无广告语义者剔除。**但豁免 ad 词根**
    （advertising-api.amazon.com、api-adservices.apple.com 这类是真广告，
    曾因词表缺 advertising / adservices 被误删 83 条）。
-7. **guard 冲突检测方向**：只查「guard 条目是否被产物覆盖」（guard ⊆ 产物）。
+7. **jinx-direct 冲突检测方向**：只查「jinx-direct 条目是否被产物覆盖」（jinx-direct ⊆ 产物）。
    冲突时删除覆盖它的上层后缀域（DOMAIN-SUFFIX 无法排除单个子域）。
 8. **词边界匹配**：语义判定按 label 切分后的词元精确比对，禁止短词子串
    （曾用裸 "ad"/"stat"/"log" 子串，误收 static / bdstatic / download / prologue）。
@@ -38,7 +38,7 @@ v4（三支路 · lite + 5 源 + Jinx）：约 9,300 条，覆盖 Jinx·中国 9
 断言（构建时自动执行，失败即非零退出）
 ======================================
 ① 无 IP / CIDR / 通配 / 修饰符        ② 静态资源域为 0（除命名含广告语义者）
-③ MUST_CONTAIN 必需域全部在位          ④ guard 条目不得被产物覆盖（一个都不能）
+③ MUST_CONTAIN 必需域全部在位          ④ jinx-direct 条目不得被产物覆盖（一个都不能）
 ⑤ 覆盖率不低于护栏                    ⑥ 规模护栏
 ⑦ 无重复
 
@@ -56,7 +56,7 @@ import sys
 import urllib.request
 
 BASE = "https://raw.githubusercontent.com/217heidai/adblockfilters/main/rules/"
-GUARD_URL = "https://raw.githubusercontent.com/RiverFlowsInUUU/Jinx/main/surge-direct.list"
+DIRECT_URL = "https://raw.githubusercontent.com/RiverFlowsInUUU/Jinx/main/surge-direct.list"
 JINX_URL = "https://raw.githubusercontent.com/RiverFlowsInUUU/Jinx/main/mihomo-ads.yaml"
 
 LITE_FILE = "adblocksurgelite.list"          # A 支路：DOMAIN-SET（每行 ".域名"）
@@ -383,23 +383,23 @@ def main():
         if did:
             climb_log.append((d, out))
 
-    # 后处理⑤：guard 冲突（方向：guard 条目是否被产物覆盖）
+    # 后处理⑤：jinx-direct 冲突（方向：jinx-direct 条目是否被产物覆盖）
     try:
-        gtxt = fetch(GUARD_URL, args.src_dir)[0]
+        gtxt = fetch(DIRECT_URL, args.src_dir)[0]
     except Exception as e:                                     # noqa: BLE001
-        print("下载 guard 失败: %s" % e, file=sys.stderr)
+        print("下载 jinx-direct 失败: %s" % e, file=sys.stderr)
         return 2
-    guard = set()
+    direct = set()
     for line in gtxt.splitlines():
         line = line.strip()
         if not line or line.startswith("#"):
             continue
         f = [x.strip() for x in line.split(",")]
         if len(f) >= 2:
-            guard.add(f[1].lower())
-    bad_guards = sorted(g for g in guard if under(g, climbed))
-    # 删除"覆盖了 guard 条目"的上层域（DOMAIN-SUFFIX 无法排除单个子域）
-    supersets = {d for d in climbed if any(under(g, {d}) for g in bad_guards)}
+            direct.add(f[1].lower())
+    shadowed_direct = sorted(g for g in direct if under(g, climbed))
+    # 删除"覆盖了 jinx-direct 条目"的上层域（DOMAIN-SUFFIX 无法排除单个子域）
+    supersets = {d for d in climbed if any(under(g, {d}) for g in shadowed_direct)}
     final = sorted(climbed - supersets)
 
     # ── 覆盖率：断言用独立基线（AWAvenue），Jinx 仅作参考 ──
@@ -443,9 +443,9 @@ def main():
     _missing = [d for d in MUST_CONTAIN if d not in fset]
     if _missing:
         errs.append("产物缺失已知必需域：%s" % _missing)
-    _still = [g for g in guard if under(g, fset)]
+    _still = [g for g in direct if under(g, fset)]
     if _still:
-        errs.append("guard 条目仍被产物覆盖 %d 条，例：%s" % (len(_still), _still[:3]))
+        errs.append("jinx-direct 条目仍被产物覆盖 %d 条，例：%s" % (len(_still), _still[:3]))
     if coverage is not None and coverage < COVERAGE_FLOOR:
         errs.append("独立基线覆盖率 %.1f%% 低于护栏 %.0f%%"
                     % (coverage * 100, COVERAGE_FLOOR * 100))
@@ -457,15 +457,15 @@ def main():
     # ── 输出 ───────────────────────────────────────────────
     hdr = [
         "# 中文广告 / 统计 / 隐私 / PCDN 域名规则集（由脚本生成，请勿手改）",
-        "# 生成器: test/build-cn-adblock.py（v4 三支路）",
+        "# 生成器: test/build-cn-adblock.py（v5 三支路 · 源快照可复现）",
         "# 支路 A: 217heidai adblocksurgelite.list（全量 16 源 ∩ china.txt）",
         "# 支路 B: AWAvenue · CJX · xinggsf · AdGuard_Chinese_filter · jiekouAD",
         "# 支路 C: 本仓 Jinx 3.2.3（上游已转加密发布，此快照冻结、不漂移）",
         "# 规矩: 仅 DNS 层可表达 · 纯 DOMAIN-SUFFIX 无通配 · 只拦域名不拦 IP",
-        "#       静态资源/功能域硬排除 · @@ 例外只做减法 · guard 条目零覆盖",
+        "#       静态资源/功能域硬排除 · @@ 例外只做减法 · jinx-direct 条目零覆盖",
         "# 规模: %d 条" % len(final),
     ]
-    audit = ["构建审计 / cn-adblock（v4 三支路）", "=" * 64, "", "一、A 支路（lite）"]
+    audit = ["构建审计 / cn-adblock（v5 三支路 · 源快照可复现）", "=" * 64, "", "一、A 支路（lite）"]
     for k, v in stat_a.items():
         audit.append("  %-26s %6d" % (k, v))
     audit += ["", "二、B 支路（5 源）"]
@@ -486,7 +486,7 @@ def main():
         "  功能域剔除                  : -%d" % len(fn_drop),
         "  灰产随机长尾剔除            : -%d" % len(gray_drop),
         "  语义上提后                  : %d" % len(climbed),
-        "  guard 冲突剔除（上层域 %d 个） : -%d" % (len(supersets), len(supersets)),
+        "  jinx-direct 冲突剔除（上层域 %d 个） : -%d" % (len(supersets), len(supersets)),
         "  最终产物                    : %d" % len(final),
         "",
         "五、覆盖率",
@@ -497,10 +497,10 @@ def main():
         "  【参考】Jinx·中国生态 %d 条 → 覆盖 %d 条 = %s"
         % (len(j_cn), j_hit, ("%.1f%%" % (cov_jinx * 100)) if cov_jinx is not None else "未测"),
         "",
-        "六、guard 冲突处理",
+        "六、jinx-direct 冲突处理",
     ]
-    if bad_guards:
-        for g in bad_guards:
+    if shadowed_direct:
+        for g in shadowed_direct:
             owners = sorted(d for d in supersets if under(g, {d}))
             audit.append("  %-42s ← 被上层域覆盖，已删除 %s" % (g, owners))
     else:
@@ -510,7 +510,7 @@ def main():
         audit.append("  %-46s -> %s" % (src, dst))
     audit += ["", "八、断言"]
     audit += ["  FAIL " + e for e in errs] or [
-        "  PASS 形态 / 静态资源 / 必需域 / guard 零覆盖 / 覆盖率 / 规模 / 无重复 —— 全部通过"]
+        "  PASS 形态 / 静态资源 / 必需域 / jinx-direct 零覆盖 / 覆盖率 / 规模 / 无重复 —— 全部通过"]
 
     if args.dry_run:
         print("\n".join(audit))

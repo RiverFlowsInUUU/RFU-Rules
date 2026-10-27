@@ -1,4 +1,4 @@
-构建审计 / cn-adblock（v4 三支路）
+构建审计 / cn-adblock（v5 三支路 · 源快照可复现）
 ================================================================
 
 一、A 支路（lite）
@@ -64,14 +64,14 @@
   功能域剔除                  : -572
   灰产随机长尾剔除            : -1935
   语义上提后                  : 9310
-  guard 冲突剔除（上层域 34 个） : -34
+  jinx-direct 冲突剔除（上层域 34 个） : -34
   最终产物                    : 9276
 
 五、覆盖率
   【断言基线·独立】AWAvenue_Ads_Rule.txt 969 条 → 覆盖 875 条 = 90.3%（护栏 85%）
   【参考】Jinx·中国生态 1511 条 → 覆盖 1382 条 = 91.5%
 
-六、guard 冲突处理
+六、jinx-direct 冲突处理
   apd-pcdnwxlogin.teg.tencent-cloud.net      ← 被上层域覆盖，已删除 ['apd-pcdnwxlogin.teg.tencent-cloud.net']
   apd-pcdnwxnat.teg.tencent-cloud.net        ← 被上层域覆盖，已删除 ['apd-pcdnwxnat.teg.tencent-cloud.net']
   apd-pcdnwxstat.teg.tencent-cloud.net       ← 被上层域覆盖，已删除 ['apd-pcdnwxstat.teg.tencent-cloud.net']
@@ -235,4 +235,4 @@
   zeus.ad.xiaomi.com                             -> ad.xiaomi.com
 
 八、断言
-  PASS 形态 / 静态资源 / 必需域 / guard 零覆盖 / 覆盖率 / 规模 / 无重复 —— 全部通过
+  PASS 形态 / 静态资源 / 必需域 / jinx-direct 零覆盖 / 覆盖率 / 规模 / 无重复 —— 全部通过
