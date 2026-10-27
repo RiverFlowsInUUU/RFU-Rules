@@ -189,6 +189,15 @@ def is_resource(d: str) -> bool:
 
 
 def is_gray_random(d: str, cluster_size: int, semantic: bool) -> bool:
+    """灰产形态判据（SKILL.md 规矩 7 的量化实现）。
+
+    阈值来源与取舍：
+      - cluster_size >= 2 —— 真平台天然成簇，灰产是「归属域下孤立 1 条」；
+      - len(b) >= 6 —— 主标签过短不足以判随机性，直接放过；
+      - 元音占比 < 0.22 且含数字 —— 正常单词元音占比远高于此，
+        随机串（x7k2m9q 型）几乎无元音。误差方向是「漏放灰产」，
+        不影响真实广告域入选，故阈值可以偏保守。
+    """
     if cluster_size >= 2 or semantic:
         return False
     b = registrable(d).split(".")[0]

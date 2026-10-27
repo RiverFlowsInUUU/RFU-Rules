@@ -52,6 +52,7 @@ echo "== 3/4 ads 产物（→ mihomo / Surge / sing-box）=="
 echo
 if [ "${1:-}" = "--build" ]; then
   echo "== 只构建，跳过校验 =="
+  echo "⚠️ 本次产物未经双闸门校验 —— 提交前请补跑 bash skill/scripts/regen.sh（不带 --build）"
   exit 0
 fi
 

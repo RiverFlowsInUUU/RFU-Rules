@@ -8,3 +8,8 @@ __pycache__/
 
 # build_ads.py 的落脚点（三支路合成的中间结果；交付物是仓库根的六份产物）
 build/
+
+# 操作系统生成物（跨 Windows / macOS 协作时的常规防护）
+.DS_Store
+Thumbs.db
+desktop.ini

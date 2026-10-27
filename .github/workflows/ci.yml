@@ -3,6 +3,7 @@ name: CI
 on:
   push:
   pull_request:
+  workflow_dispatch:   # 允许手动重跑，不必为触发 CI 而空提交
 
 # 最小权限：本工作流只读代码，不写仓库、不发 release。
 # 不声明时 GITHUB_TOKEN 走仓库默认（对 push 事件偏宽），"用多少给多少"更稳妥。
@@ -12,6 +13,7 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 15   # 负样本并发 4 路约 26s，15 分钟是充分裕量；防 runner 卡死占资源
     steps:
       - uses: actions/checkout@v7
 
