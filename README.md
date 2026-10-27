@@ -1,28 +1,31 @@
 <div align="center">
 
+<img src="icons/Surge.png" height="56" alt="Surge">&nbsp;&nbsp;&nbsp;<img src="icons/Egern.png" height="56" alt="Egern">&nbsp;&nbsp;&nbsp;<img src="icons/mihomo.png" height="56" alt="mihomo">&nbsp;&nbsp;&nbsp;<img src="icons/sing-box.svg" height="56" alt="sing-box">
+
 # 🛑 RFU 去广告规则
 
-**一份名单，四种格式**
+拦得准 · 放得对 · 负担轻
 
-拦广告 · 统计 · 隐私采集 · PCDN —— 不误杀推送登录，不拦 IP，不碰灰产
-
+[![Ads](https://img.shields.io/badge/%E6%8B%A6%E6%88%AA-9534%20%E6%9D%A1-0969da?style=flat-square)](#-拿来即用)
+[![White](https://img.shields.io/badge/%E6%94%BE%E8%A1%8C-49%20%E6%9D%A1-2da44e?style=flat-square)](#-拿来即用)
 [![Frozen](https://img.shields.io/badge/Frozen-Jinx%203.2.3-8250df?style=flat-square)](https://github.com/VME98/jinx-rules)
 [![CI](https://github.com/RiverFlowsInUUU/RFU-Rules/actions/workflows/ci.yml/badge.svg)](https://github.com/RiverFlowsInUUU/RFU-Rules/actions/workflows/ci.yml)
-[![Ads](https://img.shields.io/badge/%E6%8B%A6%E6%88%AA-9534%20%E6%9D%A1-0969da?style=flat-square)](#-订阅)
-[![White](https://img.shields.io/badge/%E6%94%BE%E8%A1%8C-49%20%E6%9D%A1-2da44e?style=flat-square)](#-订阅)
 
-[![mihomo](https://img.shields.io/badge/mihomo-OpenClash-1f6feb?style=flat-square)](#-接入)
-[![Surge](https://img.shields.io/badge/Surge-RULE--SET-orange?style=flat-square)](#-接入)
-[![Egern](https://img.shields.io/badge/Egern-%E5%A4%8D%E7%94%A8%20Surge%20%E6%A0%BC%E5%BC%8F-8957e5?style=flat-square)](#-接入)
-[![sing-box](https://img.shields.io/badge/sing--box-source%20JSON-blue?style=flat-square)](#-接入)
+[![mihomo](https://img.shields.io/badge/mihomo-OpenClash-1f6feb?style=flat-square)](#-拿来即用)
+[![Surge](https://img.shields.io/badge/Surge-RULE--SET-orange?style=flat-square)](#-拿来即用)
+[![Egern](https://img.shields.io/badge/Egern-%E5%A4%8D%E7%94%A8%20Surge%20%E6%A0%BC%E5%BC%8F-8957e5?style=flat-square)](#-拿来即用)
+[![sing-box](https://img.shields.io/badge/sing--box-source%20JSON-blue?style=flat-square)](#-拿来即用)
 
 </div>
 
-> 给自建网关（软路由 / 代理内核）准备的去广告域名规则集：约 9500 个域名，纯域名后缀、无通配无正则，路由器和手机都跑得动。四端内容逐条一致，不是四份各自维护的列表。
-
 > 🤖 AI agent 维护入口 → [`skill/SKILL.md`](skill/SKILL.md)
 
-## 📥 订阅
+一份域名名单，四个代理内核 —— **mihomo · Surge · Egern · sing-box**。
+
+换客户端，不必换名单。**拦的相同。放的相同。误杀的救法也相同 —— 49 条放行，一处维护。**
+不同的只是格式 —— 那是我们的事，不是你的事。
+
+## 📥 拿来即用
 
 | <div align="center">客户端</div> | <div align="center">🚫 拦截规则集</div> | <div align="center">✅ 放行规则集</div> |
 |:--|:--|:--|
@@ -30,10 +33,10 @@
 | **Surge** / **Egern** | [`surge-ads.list`](https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/surge-ads.list) `9534` | [`surge-direct.list`](https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/surge-direct.list) `49` |
 | **sing-box** | [`sing-box-ads.json`](https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/sing-box-ads.json) `9534` | [`sing-box-direct.json`](https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/sing-box-direct.json) `49` |
 
-📌 链接即地址，右键复制即可；备用镜像把前缀换成 `https://cdn.jsdelivr.net/gh/RiverFlowsInUUU/RFU-Rules@main/`。
+链接即地址。备用镜像换前缀：`https://cdn.jsdelivr.net/gh/RiverFlowsInUUU/RFU-Rules@main/`。
 
 <details>
-<summary>🍂 想再叠加 <b>AWAvenue 秋风规则</b>？（可选 —— 本仓已含其 969 条中的 912 条）</summary>
+<summary>🍂 想再叠加 <b>AWAvenue</b>？（可选 —— 969 条已含 912）</summary>
 
 | <div align="center">客户端</div> | <div align="center">🚫 拦截规则集</div> |
 |:--|:--|
@@ -41,27 +44,25 @@
 | **Surge** | [`AWAvenue-Ads-Rule-Surge-RULE-SET.list`](https://raw.githubusercontent.com/TG-Twilight/AWAvenue-Ads-Rule/main/Filters/AWAvenue-Ads-Rule-Surge-RULE-SET.list) `965` |
 | **sing-box** | [`AWAvenue-Ads-Rule-Singbox.json`](https://raw.githubusercontent.com/TG-Twilight/AWAvenue-Ads-Rule/main/Filters/AWAvenue-Ads-Rule-Singbox.json) `965` |
 
-重复规则对结果无副作用，只是体积多几百条。第三方规则由对方托管，只给官方地址。
+重复规则对结果无副作用。第三方规则由对方托管，只给官方地址。
 
 </details>
 
-## 🔌 接入
+## 🚦 拦得准 · 放得对
 
-⚡ 只记一条：**放行在前，拦截在后，其余分流接在后面。**
+只记一条：**放行在前，拦截在后，其余分流接在后面。**
 
 ```text
-1. 放行规则集  →  DIRECT     ← 必须最前，见下方说明
-2. 拦截规则集  →  REJECT
-3. 常规分流（GEOSITE,cn / GEOIP,cn ...）→ 按你原有的走
+1. 放行 → DIRECT   ← 49 条功能域，推送与登录全靠它
+2. 拦截 → REJECT   ← 9534 条，四类域名
+3. 其余分流        ← 照你原有的走
 ```
 
 > [!IMPORTANT]
-> **放行清单不许删，哪怕拦截集里也有同样的域。** 拦截集收了 `umeng.com`、`tanx.com`、`getui.net` 这类平台主域，而放行清单保的是同族里的推送、登录功能子域——更具体的规则先命中，各得其所。两者的重叠当前是 **42 条**，逐条列在 [`OVERLAP.md`](OVERLAP.md)。删掉放行行，推送和微信登录立刻失效。
+> 拦截集收了 `umeng.com`、`tanx.com` 这类平台主域，放行清单保的是同族里的功能子域 —— 更具体的先命中，各得其所。**删掉放行行，推送和微信登录立刻失效。** 重叠当前是 **42 条**，逐条列在 [`OVERLAP.md`](OVERLAP.md)。
 
 > [!WARNING]
-> Surge 用户：拦截行**不要加 `pre-matching`**。它会抢先于一切规则生效，放行清单整份作废——症状就是推送收不到、微信登录转圈。用 `extended-matching` 即可。
-
-各端的更多细节（Egern 的 DNS 层拒答、sing-box 参数坑、OpenClash 必关的开关）：
+> Surge 拦截行**不要加 `pre-matching`** —— 它抢先于一切规则生效，放行清单整份作废。用 `extended-matching` 即可。
 
 <details>
 <summary>🔷 <b>mihomo / OpenClash</b></summary>
@@ -128,7 +129,7 @@ rules:
     update_interval: 604800
 ```
 
-DNS 层拒答（可选）与组名改法等细节见[详情](DetailsReadme/DetailsReadme.md)。
+DNS 层拒答（可选）与组名改法见[详情](DetailsReadme/DetailsReadme.md)。
 
 </details>
 
@@ -156,41 +157,38 @@ DNS 层拒答（可选）与组名改法等细节见[详情](DetailsReadme/Detai
 
 </details>
 
-## ✨ 这份规则集的特点
+## 🧾 一目了然
 
 | | | |
 |:--|:--|:--|
-| 🚫 拦截 | **9534 条** | 广告、统计、隐私采集、PCDN；赌博色情灰产在构建时就被排除，不进名单 |
+| 🚫 拦截 | **9534 条** | 广告 · 统计 · 隐私采集 · PCDN；灰产在构建时就被排除 |
 | ✅ 放行 | **49 条** | 43 条精确 + 6 条后缀（含 5 条手工补充） |
-| 🧩 四端同源 | 同一批域名、四种格式，逐条等价 | 换客户端不用换名单 |
-| 🪶 轻 | 纯域名后缀，无通配、无正则、无 IP | 软路由与手机都无匹配负担 |
-| 📌 上游快照 | 冻结于 `3.2.3` · `2026-10-18` | 固定基线，更新由本仓统一发布，不随上游滚动 |
+| 🧩 同源 | 四端逐条等价 | 换客户端不换名单 |
+| 🪶 轻量 | 纯域名后缀 | 无通配 · 无正则 · 无 IP，软路由与手机都跑得动 |
+| 📌 上游快照 | 冻结于 `3.2.3` · `2026-10-18` | 更新由本仓统一构建发布 |
 
-放行那 49 条，全是被拦截规则误伤的推送、登录功能域——名单很短，但少了它日常使用寸步难行。
-
-## 📖 想深入了解
+## 📖 按需查阅
 
 | 文档 | 内容 |
 |:--|:--|
-| 📘 [`DetailsReadme`](DetailsReadme/DetailsReadme.md) | 数据从哪来、为什么这么取舍、转换原理、一致性如何保证 |
-| 🧪 [`skill/SKILL.md`](skill/SKILL.md) | 维护者手册：构建链、断言、加新源的完整流程 |
-| 🧷 [`OVERLAP.md`](OVERLAP.md) | 放行 × 拦截重叠清单（构建生成，CI 校验） |
-| 📄 [`WHITELIST-SLIM.md`](WHITELIST-SLIM.md) | 白名单瘦身留痕（构建生成，CI 校验） |
+| 📘 [`DetailsReadme`](DetailsReadme/DetailsReadme.md) | 数据从哪来 · 为何这么取舍 · 转换原理 · 一致性保证 |
+| 🧪 [`skill/SKILL.md`](skill/SKILL.md) | 构建链 · 断言口径 · 加新源流程 |
+| 🧷 [`OVERLAP.md`](OVERLAP.md) · [`WHITELIST-SLIM.md`](WHITELIST-SLIM.md) | 重叠清单 · 瘦身留痕（构建生成，CI 校验） |
 | 📄 [`NOTICE.md`](NOTICE.md) | 来源与使用条件（数据 vs 脚本分开授权） |
 | 📅 [`CHANGELOG.md`](CHANGELOG.md) | 变动记录 |
 
-## 📚 数据来源
+## 📚 来源
 
 | <div align="center">来源</div> | <div align="center">说明</div> |
 |:--|:--|
 | 📄 上游 | [`VME98/jinx-rules`](https://github.com/VME98/jinx-rules) · 数据 `3.2.3` · `2026-10-18` |
-| 🧩 其余 | `217heidai/adblockfilters` · AdGuard Chinese · 秋风 AWAvenue · CJX · xinggsf · jiekouAD（共六个来源，快照落盘于 `upstream/`） |
-| 📜 许可 | 规则数据版权归各上游，本仓不主张、有异议即下架；脚本与文档以 MIT 提供 |
+| 🧩 其余 | `217heidai/adblockfilters` · AdGuard Chinese · 秋风 AWAvenue · CJX · xinggsf · jiekouAD（共六个，快照落盘 `upstream/`） |
+| 📜 许可 | 数据归各上游，异议即下架；脚本与文档 MIT |
 
 ---
 
 <div align="center">
 
-📊 上游数据来自 VME98/jinx-rules 与 217heidai/adblockfilters
+🛑 拦得准 · 放得对 · 负担轻
 
 </div>
