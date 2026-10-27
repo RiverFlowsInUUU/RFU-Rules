@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""把全部上游源冻结到 upstream/ —— 一次抓取，之后构建完全离线。
+"""把全部上游源冻结到 upstream/ —— 构建完全离线的固定输入。
 
 为什么要有这个脚本
 ==================
-本仓 2026-10-27 起不再跟随上游滚动：Jinx 自 3.2.4 转为加密发布（new-rules/*.enc，
-需接收方私钥），明文 rules/ 冻结在 3.2.3；其余五个中文源若继续实时拉取，产物会
-天天漂，`产物 == 源头重跑` 这条断言永远不成立，CI 也只能对着网络赌运气。
+构建要可复现，输入就必须钉死：全部上游源落盘 `upstream/`，带 sha256 与取用
+日期；构建只读 `upstream/`，不联网。要更新就显式跑本脚本，让 diff 里看得见
+「这次换了什么」。
 
-所以六个源一律落盘到 `upstream/`，带 sha256 与取用日期。构建只读 `upstream/`，
-不碰网络；要更新就显式跑本脚本，让 diff 里看得见「这次换了什么」。
+源策略分两档（2026-10-27 起）：
+  · jinx：钉死。上游自 3.2.4 转为加密发布（new-rules/*.enc，需接收方私钥），
+    明文 rules/ 停在 3.2.3 —— 用 JINX_COMMIT 钉住，任何情况下不动。
+  · 其余五个中文源：活源。由每周定时工作流
+    （.github/workflows/update.yml）刷新，也可手动跑；任一源抓取失败
+    即不落盘 manifest、退出非零，仓内不会出现半新半旧的快照。
 
 用法
 ====
@@ -103,7 +107,8 @@ def manifest_path() -> Path:
 def build_manifest(rows: list[dict]) -> dict:
     return {
         "frozen_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
-        "policy": "上游一律冻结，构建只读 upstream/，不联网。要更新跑 "
+        "policy": "上游快照落盘，构建只读 upstream/，不联网。jinx 钉死 3.2.3，"
+                  "其余源每周由定时工作流刷新。要更新跑 "
                   "skill/scripts/freeze_upstream.py。",
         "hash_basis": "bytes 与 sha256 均按换行归一化（LF）后的文本计算，"
                       "与仓库内 .gitattributes 的 eol=lf 一致。",
@@ -166,26 +171,27 @@ def cmd_freeze() -> int:
 
 def render_manifest_md(mf: dict) -> str:
     out = [
-        "# 📌 上游快照清单（冻结）",
+        "# 📌 上游快照清单",
         "",
         "> [!IMPORTANT]",
         "> 本目录是**构建输入**，不是产物。**不要手改这里的任何文件** ——",
         "> 手改会破坏「产物 == 源头重跑」的可复现断言（`verify_products.py` 会判负）。",
         "> 要更新上游，跑 `python skill/scripts/freeze_upstream.py`，让改动留在 git diff 里可审计。",
         "",
-        "## 为什么冻结",
+        "## 源策略",
         "",
-        "Jinx 上游自 `3.2.4` 起改为加密发布（`new-rules/*.enc`，需接收方 P-256 私钥），",
-        "明文 `rules/` 停在 `3.2.3`。其余中文源若继续实时拉取，产物天天漂，",
-        "`产物 == 源头重跑` 永远不成立，CI 也变成对着网络赌运气。",
+        "jinx 上游自 `3.2.4` 起改为加密发布（`new-rules/*.enc`，需接收方 P-256 私钥），",
+        "明文 `rules/` 停在 `3.2.3` —— 用 commit 钉住，任何情况下不动；",
+        "其余中文源为活源，由每周定时工作流（`.github/workflows/update.yml`）刷新，",
+        "任一源抓取失败即不落盘、不提交，仓内不出现半新半旧的快照。",
         "",
-        "故六个源一律落盘，构建只读本目录、**不联网**。",
+        "构建只读本目录、**不联网**。",
         "",
-        "## 冻结信息",
+        "## 快照信息",
         "",
         "| 项 | 值 |",
         "|---|---|",
-        "| 冻结时间（UTC） | `%s` |" % mf["frozen_at"],
+        "| 取用时间（UTC） | `%s` |" % mf["frozen_at"],
         "| Jinx 明文通道锚点 | `VME98/jinx-rules@%s`（对应版本见 `jinx-3.2.3/version.json`） |" % mf["jinx_commit"],
         "| 源文件数 | %d |" % len(mf["sources"]),
         "",

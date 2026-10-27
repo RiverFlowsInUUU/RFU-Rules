@@ -1,0 +1,55 @@
+name: Upstream refresh
+
+# 每周把六个上游源里的「活源」拉到最新并重建产物。
+#
+# 分工：
+#   ci.yml     —— 校验仓内快照与产物的一致性（不联网，可复现）
+#   本工作流   —— 唯一联网换血的入口（跑 freeze_upstream.py + regen.sh）
+#
+# 边界：jinx 钉死在 3.2.3（上游 3.2.4 起加密发布，JINX_COMMIT 不动），
+# 其余源拉最新。抓取失败 ⇒ freeze 退出码 1 ⇒ 本工作流失败 ⇒ 不提交，
+# 仓内永远不出现「半新半旧」的快照。
+
+on:
+  schedule:
+    - cron: "0 3 * * 1"   # 每周一 03:00 UTC（北京时间 11:00）
+  workflow_dispatch:       # 手动触发，随时可补跑
+
+# 有 diff 时要把快照与产物提交回 main，故需要写权限（ci.yml 只读，互不影响）。
+permissions:
+  contents: write
+
+concurrency:
+  group: upstream-refresh
+  cancel-in-progress: false   # 上一次刷新没跑完就等它，不互相踩
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15   # freeze 拉源 + regen 双闸门，15 分钟充分裕量
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: ① 拉取上游最新（jinx 保持 3.2.3 钉死）
+        run: python skill/scripts/freeze_upstream.py
+
+      - name: ② 重跑六份产物 + 双闸门
+        # regen 自带：快照校验 → direct → ads → 六份产物 → verify + selftest。
+        # 任何一步判负都会让本步失败，后面的提交不会执行。
+        run: bash skill/scripts/regen.sh
+
+      - name: ③ 有 diff 才提交（无 diff 静默结束，不空转）
+        run: |
+          git config user.name  "rfu-updater"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "上游无变化，零 diff，不提交"
+          else
+            git commit -m "⬆️ 上游快照周更 $(date -u +%F)（jinx 保持 3.2.3 钉死）"
+            git push
+          fi
