@@ -260,6 +260,20 @@ forward:
 > [!IMPORTANT]
 > 白名单必须排在拦截之前，而且**不能因为「拦截集里也有这个域」就把白名单那行删掉**。拦截集里有 `umeng.com`、`tanx.com`、`getui.net` 这类平台主域，覆盖了放行清单里的功能子域；靠的就是更具体的规则先命中 DIRECT。顺序颠倒 = 推送和登录直接失效。
 
+### 🧩 消费端契约
+
+📋 「放行在前」这条约束在各端的落点不同，逐端对照：
+
+| 客户端 | 靠什么保证顺序 |
+|:--|:--|
+| mihomo / OpenClash | `rules` 列表顺序 —— `RULE-SET,rfu-direct,DIRECT` 写在 `rfu-ads` 之前 |
+| Surge / Egern | `[Rule]` 行序同上；**拦截行不得加 `pre-matching`**（详见下条） |
+| sing-box | `rules` 数组顺序 —— `rfu-direct` 的元素排在 `rfu-ads` 之前 |
+
+⚠️ **Surge 的 `pre-matching` 会从根上破坏这个顺序。** 官方文档：`pre-matching` 规则会被**抽出来先于一切其它规则**求值（"Pre-matched rules have the highest priority"），且该参数**只支持 REJECT 系策略** —— 放行行无法用同一参数自救。给拦截行加上它，下面那份重叠清单里的域名会全部失效，症状正是推送收不到、微信登录转圈。
+
+📐 白名单与拦截集**必然重叠**（拦截集收平台主域，放行集保同族功能子域），当前是 **42 条**，逐条列在 [`OVERLAP.md`](OVERLAP.md) —— 那份文件由构建生成、CI 校验，改判据时会同步更新。
+
 ---
 
 ## 🚧 OpenClash
@@ -293,6 +307,8 @@ uci commit openclash
 | 📘 [`DetailsReadme/DetailsReadme.md`](DetailsReadme/DetailsReadme.md) | 三支路来源与取舍 · 缓存与生效判据 · 转换原理 · OpenClash 细节 · 一致性保证 |
 | 🧪 [`skill/SKILL.md`](skill/SKILL.md) | 匹配语义判定 · 通配映射 · 加新源的方法 · 断言口径 · 七条不要越的线 |
 | 🧰 [`skill/scripts/`](skill/scripts/) | `freeze_upstream.py` / `build_ads.py` / `convert_ruleset.py` / `regen.sh` |
+| 🧷 [`OVERLAP.md`](OVERLAP.md) | 白名单 × 拦截集重叠清单（构建生成 · CI 校验） |
+| 📄 [`NOTICE.md`](NOTICE.md) | 来源与使用条件（数据 vs 脚本分开授权） |
 | 📅 [`CHANGELOG.md`](CHANGELOG.md) | 规则变动记录 |
 
 🧷 六份文件同一次生成、内容等价，由 CI 每次提交自动校验（三格式逐条比对 + 条数声明 + 产物可复现 + 上游快照完整性），读数字不符会直接标红。
@@ -304,12 +320,14 @@ uci commit openclash
 | <div align="center">项</div> | <div align="center">说明</div> |
 |:--|:--|
 | 📄 上游 | [`VME98/jinx-rules`](https://github.com/VME98/jinx-rules) · 数据 `3.2.3` · `2026-10-18` |
-| 🧩 其余来源 | `217heidai/adblockfilters` · AdGuard Chinese · 秋风 AWAvenue · CJX · xinggsf · jiekouAD |
+| 🧩 其余来源 | `217heidai/adblockfilters` · AdGuard Chinese · 秋风 AWAvenue · CJX · xinggsf · jiekouAD（合计六个上游来源，落盘为 `upstream/` 下 3 组 12 个文件） |
 | 📜 许可 | 各上游均未声明，本仓亦不主张 |
 | 🧬 规则数据 | 版权归各上游及其原始来源 |
 | 🧪 `skill/` | 构建脚本与方法论，不含上游数据，可自由取用 |
 
-📮 上游已自 3.2.4 起转为加密发布，本仓以 3.2.3 明文快照为基线、**不再跟随**。任一上游作者如有异议，开 issue 即下架对应来源。
+📮 上游已自 3.2.4 起转为加密发布，本仓以 3.2.3 明文快照为基线、**不再跟随**，也**不监测上游是否发版**（这是冻结仓的取舍：CI 不联网，绿灯只由本仓自己的完整性决定）。若想主动看一眼，跑 `python skill/scripts/freeze_upstream.py --check` 只会校验仓内快照；要真正拉新版得显式跑一次同目录下的 `freeze_upstream.py`，改动会留在 diff 里。
+
+📜 数据与脚本的授权条件不同：规则数据各上游均未声明、本仓不主张；`skill/` 下的脚本与文档以 MIT 提供。详见 [`NOTICE.md`](NOTICE.md)。任一上游作者如有异议，开 issue 即下架对应来源。
 
 ---
 

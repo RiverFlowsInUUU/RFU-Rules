@@ -55,6 +55,7 @@ from __future__ import annotations
 
 import argparse
 import collections
+import json
 import re
 import sys
 from pathlib import Path
@@ -318,10 +319,93 @@ def parse_direct_product() -> set:
 
 # ────────────────────────────── 主流程
 
+def render_overlap(same, above, climbed, n_direct, label_text):
+    """渲染 OVERLAP.md —— 白名单与拦截集的重叠清单。
+
+    为什么要落盘：这份清单此前只出现在 build/ads/ads-audit.txt，而 build/ 被
+    .gitignore 挡住 —— 订阅者看不到、CI 不校验。可它恰恰是本仓最该被看见的风险：
+    这 42 条域名只能靠"放行行更早命中"存活，一旦消费端把 REJECT 提前
+    （Surge 的 pre-matching 就是这么干的），它们全部失效。
+    """
+    lines = [
+        "# ⚠️ 白名单 × 拦截集 重叠清单",
+        "",
+        "> 本文件由 `skill/scripts/build_ads.py` 生成，**勿手改**。",
+        "> 生成依据：%s" % label_text,
+        "> CI 会独立复算并与此文件比对（第 14 段），数字或清单不符即判负。",
+        "",
+        "**共 %d 条**：%d 条同域同名 + %d 条上层后缀覆盖（白名单共 %d 条，其余 %d 条与拦截集无关）。"
+        % (len(same) + len(above), len(same), len(above), n_direct,
+           n_direct - len(same) - len(above)),
+        "",
+        "## 这是什么",
+        "",
+        "`surge-direct.list`（放行）与 `surge-ads.list`（拦截）**不是互斥的两个集合**。",
+        "拦截集收了平台主域（`umeng.com`、`umeng` 系、`tanx.com`、`getui.net`、`jpush.cn` …），",
+        "而放行集要保的是同族里的功能子域（推送建连、微信登录、一键登录）。",
+        "域名规则只能整棵树一起拦或一起放，所以两者必然重叠 —— 重叠本身不是 bug。",
+        "",
+        "## 所以：放行必须排在拦截之前",
+        "",
+        "重叠域名的处置完全依赖**规则顺序**：更具体的那条先命中。",
+        "",
+        "| 客户端 | 靠什么保证 |",
+        "|:--|:--|",
+        "| mihomo / OpenClash | `rules` 列表顺序，`rfu-direct` 那条写在 `rfu-ads` 之前 |",
+        "| Surge / Egern | `[Rule]` 顺序同上；**拦截行不得加 `pre-matching`**（见下） |",
+        "| sing-box | `rules` 数组顺序，`rfu-direct` 的元素排在 `rfu-ads` 之前 |",
+        "",
+        "⚠️ **Surge 的 `pre-matching` 会破坏这个顺序。** 官方文档：",
+        "「Rules tagged with `pre-matching` are extracted and checked before everything else」",
+        "「Pre-matched rules have the highest priority」，且该参数**只支持 REJECT 系策略** ——",
+        "放行行无法用同一参数自救。给拦截行加上它，下面这 %d 条会全部失效，"
+        % (len(same) + len(above)),
+        "表现出来就是推送收不到、微信登录转圈。",
+        "",
+        "## 一、同域同名（%d 条）" % len(same),
+        "",
+        "拦截集里就有这一条，靠放行行先命中救回。",
+        "",
+        "| 域名 | 备注 |",
+        "|:--|:--|",
+    ]
+    for g in same:
+        lines.append("| `%s` | 同名 |" % g)
+
+    lines += [
+        "",
+        "## 二、上层后缀覆盖（%d 条）" % len(above),
+        "",
+        "拦截集只有父域，子域被连带；同样靠放行行先命中。",
+        "",
+        "| 放行条目 | 覆盖它的拦截规则 |",
+        "|:--|:--|",
+    ]
+    for g in above:
+        owners = sorted(d for d in climbed if d != g and under(g, {d}))
+        lines.append("| `%s` | %s |" % (g, " / ".join("`%s`" % o for o in owners[:2])))
+
+    lines += [
+        "",
+        "## 改判据时注意",
+        "",
+        "- 想让这份清单变短，只能从拦截集里剔除对应**上层域** —— 但那会连带放过整个平台，",
+        "  历史上试过（删 `tanx.com` 保一个子域），结果漏拦面积远大于收益，已回退。",
+        "  `build_ads.py` 因此**只报告、不删除**。",
+        "- 新增放行条目时，先看它是否落在这里：若是，说明它已经在靠顺序保护，",
+        "  不需要额外动作；若不是，才需要考虑是否要改拦截集。",
+        "",
+    ]
+    return "\n".join(lines)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="ads 域名集构建器（三支路 · 离线）")
     ap.add_argument("--out", default=str(OUT_DIR / "ads-src.txt"))
     ap.add_argument("--audit", default=str(OUT_DIR / "ads-audit.txt"))
+    ap.add_argument("--overlap", default=None,
+                    help="把「白名单∩拦截集」重叠清单写成 markdown（regen.sh 传 OVERLAP.md）。"
+                         "不给则只在审计里打印 —— 校验时的临时构建不该写仓库。")
     ap.add_argument("--dry-run", action="store_true", help="只输出审计，不落盘")
     ap.add_argument("--coverage-floor", type=float, default=COVERAGE_FLOOR,
                     help="独立基线覆盖率下限（默认 %(default)s）")
@@ -393,7 +477,19 @@ def main() -> int:
     # direct 与 ads 的关系是「顺序」而非「删除」：direct 排在拦截集之前，
     # 更具体的规则先命中 DIRECT，功能域自然获救。此处只报告，不删上层域。
     shadowed_direct = sorted(g for g in direct if under(g, climbed))
+    ov_same = [g for g in shadowed_direct if g in climbed]
+    ov_above = [g for g in shadowed_direct if g not in climbed]
     final = sorted(climbed)
+
+    # 产物表头 `# source:` 的文案。为什么由这里出而不是写死在 regen.sh / verify：
+    # 两处各写一遍必然漂移，而表头不一致会被第 6 段当成"产物不可复现"报错。
+    # 这里从 upstream 的 version.json 派生，写进 label.txt，两边都读同一份。
+    try:
+        _ver = json.loads(read(UP / "jinx-3.2.3" / "version.json"))
+        label_text = "upstream/(A+B+C) · jinx %s (%s)" % (
+            _ver["version"], _ver["lastUpdate"][:10])
+    except Exception:                                          # noqa: BLE001
+        label_text = "upstream/(A+B+C)"
 
     # ── 覆盖率 ─────────────────────────────────────────────
     fset = set(final)
@@ -508,6 +604,15 @@ def main() -> int:
         p.parent.mkdir(parents=True, exist_ok=True)
         with open(p, "w", encoding="utf-8", newline="") as f:
             f.write("\n".join(lines) + "\n")
+
+    # 表头文案单独落盘，供 regen.sh / verify 共用（见上面的注释）
+    with open(Path(args.out).parent / "label.txt", "w", encoding="utf-8", newline="") as f:
+        f.write(label_text + "\n")
+
+    if args.overlap:
+        Path(args.overlap).write_text(
+            render_overlap(ov_same, ov_above, climbed, len(direct), label_text),
+            encoding="utf-8", newline="")
     print("ads 域名集 %d 条 -> %s" % (len(final), args.out))
     print("审计 -> %s" % args.audit)
     if errs:

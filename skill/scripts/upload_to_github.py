@@ -10,6 +10,7 @@ Requires token scopes:
 Files are uploaded to the repository ROOT using their local basename.
 """
 import argparse
+import os
 import base64
 import json
 import pathlib
@@ -43,12 +44,17 @@ def call(url, token, method='GET', payload=None):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--token', required=True)
+    # 令牌优先从环境变量取 —— 走 --token 会把它写进 shell history 与进程列表。
+    ap.add_argument('--token', default=os.environ.get('GITHUB_TOKEN') or os.environ.get('GH_TOKEN'),
+                    help='PAT；可省略，默认读环境变量 GITHUB_TOKEN / GH_TOKEN')
     ap.add_argument('--repo', required=True)
     ap.add_argument('--private', action='store_true', help='default is public')
     ap.add_argument('--files', nargs='+', required=True)
     ap.add_argument('--description', default='Ad-block ruleset for mihomo / Surge / Egern / sing-box (Chinese ad·stats·privacy·PCDN domains, frozen Jinx 3.2.3 baseline)')
     args = ap.parse_args()
+    if not args.token:
+        sys.exit('❌ 缺令牌：用 --token <PAT>，或先 export GITHUB_TOKEN=<PAT>'
+                 '（推荐后者，避免留在 shell history 里）')
 
     status, me = call(API + '/user', args.token)
     if status != 200:

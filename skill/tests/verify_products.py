@@ -24,7 +24,7 @@ direct 仍由上游白名单瘦身而来。两者都只读 `upstream/`，**构�
   python skill/tests/verify_products.py          # 在仓根执行
   python skill/tests/verify_products.py --root . # 显式指定仓根
 
-断言清单（13 段，执行顺序）:
+断言清单（14 段，执行顺序）:
   1. 六份产物存在且非空
   2. 三格式条数一致（ads 三份互等 / direct 三份互等）
   3. 跨格式语义等价（归一化后逐条比对，不是只比条数）
@@ -40,6 +40,8 @@ direct 仍由上游白名单瘦身而来。两者都只读 `upstream/`，**构�
   9. 行尾符与 BOM（BOM 硬判负；行尾只做同族一致性与事实播报）
  10. 平台清单齐备 —— 面向外部的说明（仓库简介来源 / README / DetailsReadme / SKILL）
      必须列全所有平台。实证：sing-box 曾从仓库简介里漏了一周无人发现。
+ 12. 白名单 × 拦截集重叠清单（OVERLAP.md）与当前产物一致 —— 独立复算，
+     防「清单写的和产物算的不是一回事」。这是本仓唯一对外可见的风险清单。
  11. 表格内 emoji 宽度一致 —— 同一表格的 emoji 码位数必须相同，
      否则带 U+FE0F 的那个会占两格、该行在宽字符字体下错位。
 
@@ -100,7 +102,9 @@ PRODUCTS = {
 #                把表头钉成固定文案，否则「可复现」会把路径差异误报成内容差异。
 #    ⚠️ 别为了「统一」给 direct 加 `./` 前缀：表头会跟着变，第 6 段立刻判负。
 SRC_OF = {'ads': None, 'direct': 'upstream/jinx-3.2.3'}   # ads 的 src 是临时目录
-LABEL_OF = {'ads': 'upstream/(A+B+C)'}                    # 写进 `# source:` 的固定文案
+# 表头文案不在这里写死 —— 由 build_ads.py 从 upstream/version.json 派生并写入
+# build/ads/label.txt，本脚本与 regen.sh 都读同一份。两处各写一遍必然漂移，
+# 而漂移会被第 6 段当成「产物不可复现」报错（见 seg_reproducible）。
 REGEN = {
     # ads 的输入是 build_ads.py 的产物（ads-src.txt），本表只描述「最后一步」；
     # 完整生成链见 regen.sh（先 build_ads.py 再本表）。
@@ -656,8 +660,9 @@ def seg_reproducible(root, rep, counts=None):
                 src = SRC_OF[fam]
             cmd = ([sys.executable, str(script), '--out', tmp, '--naming', 'repo',
                     '--src', src] + extra)
-            if fam in LABEL_OF:
-                cmd += ['--label', LABEL_OF[fam]]
+            if fam == 'ads':
+                lab = (ads_src_dir / 'label.txt').read_text(encoding='utf-8').strip()
+                cmd += ['--label', lab]
             proc = subprocess.run(cmd, cwd=str(root), capture_output=True, text=True)
             if proc.returncode != 0:
                 rep.judge(False, 'repro', f'{fam}: 重跑生成失败（exit {proc.returncode}）',
@@ -1086,6 +1091,92 @@ def seg_table_emoji_width(root, rep):
                   '它们各自独立成行，不参与纵向对齐')
 
 
+def seg_overlap(root, rep):
+    """第 12 段：OVERLAP.md 必须与当前产物一致（独立复算，不复用构建器结果）。
+
+    动机（2026-10-27 外部审查）：这份清单此前只落在 `build/ads/ads-audit.txt`，
+    而 `build/` 在 .gitignore 里 —— 订阅者看不到、CI 不校验。可它恰恰是本仓
+    最该被看见的风险：这几十条放行条目只能靠"放行行更早命中"存活；消费端一旦
+    把 REJECT 提前（Surge 的 pre-matching 就是），它们全部失效，症状是推送收不到、
+    微信登录转圈。
+
+    判据刻意做成**独立复算**：直接从两份产物重算，再与文件里的清单逐条比对。
+    不复用 build_ads 的中间结果，这样"生成器写错"也会被抓到。
+    """
+    rep.section('12. 白名单 × 拦截集重叠清单（OVERLAP.md）')
+    md = root / 'OVERLAP.md'
+    if not md.is_file():
+        rep.judge(False, 'ovl', 'OVERLAP.md 缺失',
+                  '它是本仓唯一对外可见的风险清单：重跑 bash skill/scripts/regen.sh 生成')
+        return
+    text = md.read_text(encoding='utf-8')
+
+    ads = parse_surge(root / PRODUCTS['ads']['surge'])
+    ads_suf = {e.split(',', 1)[1].strip().lower()
+               for e in ads if e.upper().startswith('DOMAIN-SUFFIX,')}
+    direct = parse_surge(root / PRODUCTS['direct']['surge'])
+
+    def covered(v):
+        q = v.split('.')
+        return any('.'.join(q[i:]) in ads_suf for i in range(len(q) - 1))
+
+    same, above = set(), set()
+    for e in direct:
+        t, _, v = e.partition(',')
+        v = v.strip().lower()
+        if not v:
+            continue
+        # 同域同名 vs 被上层覆盖，判据只看"值本身是不是拦截集里的那一条"：
+        # direct 侧有 DOMAIN（精确）与 DOMAIN-SUFFIX 两种写法，但 ads 侧全是后缀，
+        # 所以只要值本身在 ads 后缀集合里，就属「同名」—— 别按 direct 的类型分支，
+        # 否则 `DOMAIN,jpush.cn` 这种会被漏掉（既不进 same 也不进 above）。
+        if v in ads_suf:
+            same.add(v)
+        elif covered(v):
+            above.add(v)
+
+    m = re.search(r'\*\*共 (\d+) 条\*\*：(\d+) 条同域同名 \+ (\d+) 条上层后缀覆盖'
+                  r'（白名单共 (\d+) 条，其余 (\d+) 条与拦截集无关）', text)
+    if not m:
+        rep.judge(False, 'ovl', 'OVERLAP.md 摘要行未命中（版式变了？）',
+                  '判据锚在「**共 N 条**：A 条同域同名 + B 条上层后缀覆盖（白名单共 C 条…）」')
+        return
+    got = tuple(int(x) for x in m.groups())
+    want = (len(same) + len(above), len(same), len(above), len(direct),
+            len(direct) - len(same) - len(above))
+    rep.judge(got == want, 'ovl',
+              f'重叠摘要: {got} == {want}' if got == want else
+              f'重叠摘要: 声明 {got} != 复算 {want}',
+              '（共, 同域同名, 上层覆盖, 白名单总数, 无关）五项都要对上')
+
+    # README 里也报了这个数（「当前是 **42 条**，逐条列在 OVERLAP.md」）——
+    # 那是订阅者唯一会读到的地方，必须跟着产物走。同一类"文档数字无人校验"
+    # 的坑今天已经踩过两次（SKILL 读数、能力矩阵构成），这里一次补齐。
+    rd = root / 'README.md'
+    if rd.is_file():
+        m2 = re.search(r'当前是 \*\*(\d+) 条\*\*，逐条列在', rd.read_text(encoding='utf-8'))
+        if not m2:
+            rep.judge(False, 'ovl', 'README 的重叠条数句未命中（版式变了？）',
+                      '判据锚在「当前是 **N 条**，逐条列在 [OVERLAP.md]」')
+        else:
+            rep.judge(int(m2.group(1)) == want[0], 'ovl',
+                      f'README 重叠条数: {m2.group(1)} == {want[0]}'
+                      if int(m2.group(1)) == want[0] else
+                      f'README 重叠条数: 声明 {m2.group(1)} != 复算 {want[0]}',
+                      'README 是订阅者唯一会读到这个数的地方')
+
+    listed = set(re.findall(r'^\| `([^`]+)` \|', text, re.M))
+    extra = sorted(listed - (same | above))
+    missing = sorted((same | above) - listed)
+    rep.judge(not extra and not missing, 'ovl',
+              f'重叠清单逐条一致（{len(listed)} 条）'
+              if not extra and not missing else
+              f'重叠清单与产物不一致：多 {len(extra)} / 缺 {len(missing)}',
+              '\n'.join(['多出: ' + ', '.join(extra[:5])] if extra else []) +
+              ('\n' if extra and missing else '') +
+              ('缺失: ' + ', '.join(missing[:5]) if missing else ''))
+
+
 # ---------------------------------------------------------------- main
 
 def collect_counts(root):
@@ -1125,6 +1216,7 @@ def run(root):
     seg_lineendings(root, rep)
     seg_platform_coverage(root, rep)
     seg_table_emoji_width(root, rep)
+    seg_overlap(root, rep)
 
     print(rep.render())
     print()

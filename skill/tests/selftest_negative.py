@@ -293,6 +293,46 @@ def _(w):
                    encoding='utf-8')
 
 
+@case('重叠清单数字写错（第 12 段摘要）', '重叠摘要: 声明')
+def _(w):
+    """把 OVERLAP.md 摘要行的「共 N 条」改成一个不对的数。
+
+    守第 12 段的**计数判据**：它独立复算两份产物，再与文件里的五项数字比对。
+    """
+    p = w / 'OVERLAP.md'
+    t = p.read_text(encoding='utf-8')
+    m = re.search(r'\*\*共 (\d+) 条\*\*', t)
+    assert m, '负样本失效：OVERLAP.md 摘要行版式变了'
+    p.write_text(t[:m.start(1)] + str(int(m.group(1)) + 1) + t[m.end(1):], encoding='utf-8')
+
+
+@case('重叠清单漏一条（第 12 段逐条比对）', '重叠清单与产物不一致')
+def _(w):
+    """删掉 OVERLAP.md 里的一行表格 —— 数字仍自洽，但清单少了一条。
+
+    守第 12 段的**逐条判据**：只对数字不对清单的话，这一条会被漏掉。
+    """
+    p = w / 'OVERLAP.md'
+    lines = p.read_text(encoding='utf-8').splitlines()
+    idx = max(i for i, l in enumerate(lines) if re.match(r'^\| `[^`]+` \|', l))
+    del lines[idx]
+    p.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+
+
+@case('README 重叠条数与产物不符（第 12 段）', 'README 重叠条数: 声明')
+def _(w):
+    """改 README 里「当前是 **42 条**」这个数 —— OVERLAP.md 不动。
+
+    守的是"订阅者读到的那份数字"：OVERLAP.md 对了不代表 README 对，反之亦然。
+    同一类"文档数字无人校验"今天已经栽过两次，所以两边各有一条负样本。
+    """
+    p = w / 'README.md'
+    t = p.read_text(encoding='utf-8')
+    m = re.search(r'当前是 \*\*(\d+) 条\*\*', t)
+    assert m, '负样本失效：README 的重叠条数句版式变了'
+    p.write_text(t[:m.start(1)] + str(int(m.group(1)) - 1) + t[m.end(1):], encoding='utf-8')
+
+
 def main():
     if not TARGET.is_file():
         print(f'❌ 前置不达标：找不到 {TARGET}')

@@ -79,15 +79,20 @@ import collections
 import json
 import pathlib
 import re
-import urllib.request
-
-UA = {'User-Agent': 'Mozilla/5.0'}
 
 
 def read_text(src):
-    if str(src).startswith(('http://', 'https://')):
-        return urllib.request.urlopen(
-            urllib.request.Request(src, headers=UA), timeout=90).read().decode('utf-8', 'replace')
+    """只读本地文件。
+
+    ⚠️ 这里曾有一条「src 是 http(s) 就从网上拉」的分支，2026-10-27 删除。
+    两条原因：
+      ① 它是**不可达的死代码** —— 所有调用方传进来的都是 pathlib.Path，
+         而 `Path('https://x/y')` 会被折叠成 `https:/x/y`，永远进不了那个分支；
+      ② 它和本仓的铁律「构建只读 upstream/，不联网；唯一联网入口是
+         freeze_upstream.py」直接矛盾。死代码也是承诺的一部分：读者看到它，
+         就会以为"写 --src https://… 也能用"，而那恰好会毁掉"产物可复现"。
+    要更新上游，请走 freeze_upstream.py —— 它会让改动留在 git diff 里。
+    """
     return pathlib.Path(src).read_text(encoding='utf-8', errors='replace')
 
 

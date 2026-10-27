@@ -32,8 +32,11 @@ echo "== 1/4 direct 放行清单（上游白名单 → 瘦身 → 三平台）==
     --extra-white custom-direct.list
 
 echo
-echo "== 2/4 ads 域名集（三支路合成）=="
-"$PY" skill/scripts/build_ads.py
+echo "== 2/4 ads 域名集（三支路合成）+ 重叠清单 =="
+# --overlap 让「白名单×拦截集」的重叠清单落盘成仓库根的 OVERLAP.md。
+# 此前它只在 build/ 里（被 gitignore），订阅者看不到、CI 也不校验 ——
+# 而它恰恰是本仓最该被看见的风险（42 条域名只能靠规则顺序存活）。
+"$PY" skill/scripts/build_ads.py --overlap OVERLAP.md
 
 echo
 echo "== 3/4 ads 产物（→ mihomo / Surge / sing-box）=="
@@ -42,7 +45,7 @@ echo "== 3/4 ads 产物（→ mihomo / Surge / sing-box）=="
 "$PY" "$SK" --src build/ads --out . \
     --fixed ads-src.txt \
     --tag ads --mode suffix --naming repo \
-    --label "upstream/(A+B+C)" \
+    --label "$(cat build/ads/label.txt)" \
     --extra custom-ads.list
 
 echo
