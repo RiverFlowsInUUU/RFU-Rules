@@ -63,11 +63,11 @@ A 8480  +  B 1392  +  C 3815
 
 | 客户端 | 文件 | 格式 | 条数 | 用途 |
 |:-------|:-----|:-----|-----:|:-----|
-| mihomo / OpenClash | `mihomo-ads.yaml` | `classical` | 9122 | 拦截 |
+| mihomo / OpenClash | `mihomo-ads.yaml` | `classical` | 9140 | 拦截 |
 | mihomo / OpenClash | `mihomo-direct.yaml` | `classical` | 49 | 放行 |
-| Surge / Egern | `surge-ads.list` | `RULE-SET` / `rule_set` | 9122 | 拦截 |
+| Surge / Egern | `surge-ads.list` | `RULE-SET` / `rule_set` | 9140 | 拦截 |
 | Surge / Egern | `surge-direct.list` | `RULE-SET` / `rule_set` | 49 | 放行 |
-| sing-box | `sing-box-ads.json` | `source` | 9122 | 拦截 |
+| sing-box | `sing-box-ads.json` | `source` | 9140 | 拦截 |
 | sing-box | `sing-box-direct.json` | `source` | 49 | 放行 |
 
 🔵 **Egern 复用 Surge 那份文件**：两者规则集格式同源（`DOMAIN-SUFFIX` / `DOMAIN` 逐字相同），无需独立产物。引用位置有两处：`rules` 段的 `rule_set`（连接阶段）、`forward` 段的 `proxy_rule_set`（DNS 阶段）。依据：姊妹仓 [Self-Configuration](https://github.com/RiverFlowsInUUU/Self-Configuration) 四份现役 Egern profile 均如此引用，并将这两份登记为「共用规则集」。
@@ -154,7 +154,7 @@ A 8480  +  B 1392  +  C 3815
 | 放行集 `x.com` | 仅精确，不继承子域 | `DOMAIN` | `DOMAIN` | 同 Surge | `domain` |
 | 放行集 `*.x.com` | 该域 + 全部子域 | `DOMAIN-SUFFIX` | `DOMAIN-SUFFIX` | 同 Surge | `domain_suffix` |
 
-- 🎯 **本仓产物已无通配**：拦截集 9122 条全部是 `DOMAIN-SUFFIX`，`DOMAIN-REGEX` / `DOMAIN-WILDCARD` 为 0。上游里那些内嵌星号规则（159 条）在 DNS 层无法表达，已在构建阶段丢弃并计数；能无损降为后缀的（105 条 `*.x.com`）则降为后缀 —— 于是三端语义天然一致，不需要写法映射。
+- 🎯 **本仓产物已无通配**：拦截集 9140 条全部是 `DOMAIN-SUFFIX`，`DOMAIN-REGEX` / `DOMAIN-WILDCARD` 为 0。上游里那些内嵌星号规则（159 条）在 DNS 层无法表达，已在构建阶段丢弃并计数；能无损降为后缀的（105 条 `*.x.com`）则降为后缀 —— 于是三端语义天然一致，不需要写法映射。
 - 🌳 `DOMAIN-SUFFIX` / `domain_suffix` 覆盖整个子域树；误杀用白名单放行。
 - 🧱 仅域名级拦截，同域内嵌广告需 MITM / URL 级规则。
 - ⏭️ 上游 `url_*` / `mitm_skip_domains` 依赖 MITM 上下文，未转换。

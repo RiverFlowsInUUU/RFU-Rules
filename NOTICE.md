@@ -5,17 +5,20 @@
 
 ## 一、规则数据：`upstream/` 与仓库根的六份产物
 
-| 来源 | 上游仓库 | 许可状态 |
+| 来源 | 上游仓库 | 许可状态（2026-10-27 经 GitHub API 逐仓核实） |
 |:--|:--|:--|
 | Jinx（明文快照 3.2.3） | `VME98/jinx-rules` | 未声明 |
-| 217heidai | `217heidai/adblockfilters` | 未声明（该仓 README 自称聚合） |
-| AdGuard Chinese / EasyList China | 对应上游仓 | 未声明 |
-| 秋风 AWAvenue | `TG-Twilight/AWAvenue-Ads-Rule` | GPL-3.0 |
-| CJX Annoyance / xinggsf / jiekouAD | 对应上游仓 | 未声明 |
+| 217heidai（聚合仓，本仓 5 个中文源的直接取用点） | `217heidai/adblockfilters` | **GPL-3.0** |
+| 秋风 AWAvenue | `TG-Twilight/AWAvenue-Ads-Rule` | **GPL-3.0** |
+| CJX Annoyance | `cjx82630/cjxlist` | **LGPL-3.0** |
+| AdGuard 系 / xinggsf / jiekouAD | 对应上游仓 | xinggsf / jiekouAD 未声明；AdGuard 系（`AdguardTeam/*`）为 GPL-3.0 |
 
 - 🚫 **本仓不主张对规则数据的任何权利**，也不对其准确性、完整性、时效性作任何担保。
-- ⚖️ 各上游均未声明开源许可（`license: null`）。本仓做的是**格式转换与合并再分发**，
-  这一行为在各上游条款下的合法性**未获确认**；如需商用或再分发，请自行逐一核实上游条款。
+- ⚖️ **许可事实（v11 审查 3.5 修正）**：多数上游数据为 **GPL-3.0 / LGPL-3.0**，
+  并非此前误记的「均未声明」。域名清单作为数据受何种程度的 GPL 约束属于灰色地带
+  （同生态的 blackmatrix7 / hagezi 等仓均以类似方式再分发）；本仓做的是**格式转换与
+  合并再分发**，该行为在上游条款下的合法性**未获逐一确认**。个人订阅使用风险极低；
+  **二次分发或商用前，请自行核实各上游条款**（尤其 GPL-3.0 系），必要时联系上游作者。
 - 📮 任一上游的权利人提出异议，**开 issue 即下架对应来源**，无需解释、不设前置条件。
 
 ## 二、非数据部分：`skill/` 下的脚本与仓库内文档

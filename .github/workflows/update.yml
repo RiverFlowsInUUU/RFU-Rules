@@ -15,9 +15,11 @@ on:
     - cron: "0 3 * * 1"   # 每周一 03:00 UTC（北京时间 11:00）
   workflow_dispatch:       # 手动触发，随时可补跑
 
-# 有 diff 时要把快照与产物提交回 main，故需要写权限（ci.yml 只读，互不影响）。
+# 有 diff 时要把快照与产物提交回 main，失败时要自动开 issue 报警（v11 审查 3.2：
+# 无人值守的周更若静默失败，上游数据会悄然老化数周无人知），故需要写权限。
 permissions:
   contents: write
+  issues: write
 
 concurrency:
   group: upstream-refresh
@@ -52,4 +54,35 @@ jobs:
           else
             git commit -m "⬆️ 上游快照周更 $(date -u +%F)（jinx 保持 3.2.3 钉死）"
             git push
+          fi
+
+      - name: ④ 失败报警（自动开 issue；已有未闭合报警则追加评论）
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          MARKER="周更工作流失败"
+          open_num=$(gh issue list --search "$MARKER in:title state:open" \
+            --json number --jq '.[0].number // empty')
+          body="**运行**：${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+          **时间**：$(date -u '+%F %T UTC')
+          上游抓取 / 重建 / 闸门任一环节失败。仓库快照保持上一次成功状态（不提交半新半旧），
+          但数据已停止老化更新 —— 请查看 Actions 日志定位失败源。"
+          if [ -n "$open_num" ]; then
+            gh issue comment "$open_num" --body "$body"
+          else
+            gh issue create --title "⏰ $MARKER（$(date -u +%F)，待排查）" --body "$body"
+          fi
+
+      - name: ⑤ 成功后闭合历史报警（有则关，无则跳过）
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          open_num=$(gh issue list --search "周更工作流失败 in:title state:open" \
+            --json number --jq '.[0].number // empty')
+          if [ -n "$open_num" ]; then
+            gh issue close "$open_num" --comment "本次周更已恢复正常，自动闭合。"
+          else
+            echo "无未闭合报警"
           fi

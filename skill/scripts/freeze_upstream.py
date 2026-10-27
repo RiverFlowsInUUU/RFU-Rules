@@ -33,6 +33,7 @@ import hashlib
 import json
 import os
 import sys
+import time
 import urllib.request
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -75,6 +76,9 @@ SOURCES = [
     ("cn", "jiekouAD.txt", _ADB + "jiekouAD.txt", "接口广告源（灰产长尾多，靠准入规则滤）"),
     ("cn", "CJX_Annoyance_List.txt", _ADB + "CJX's_Annoyance_List.txt", "CJX 中文骚扰+广告"),
     ("cn", "xinggsf_mv.txt", _ADB + "xinggsf_mv.txt", "xinggsf（优酷等）"),
+    # 「独立第二覆盖率基线」方案（v11 审查 3.1，AdGuard DNS filter）经实测否决：
+    # 该列表是国际通用向，与 CN 向产物仅 3.1% 交集、CN 子集仅 17 条，无统计力。
+    # 改用 build_ads 的「B 支路采纳率带宽 + 单源哨兵」直接守准入判据本身。
 ]
 
 
@@ -82,10 +86,23 @@ def sha256_text(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-def http_get(url: str) -> str:
-    req = urllib.request.Request(url, headers={"User-Agent": UA})
-    with urllib.request.urlopen(req, timeout=120) as r:
-        return r.read().decode("utf-8", "replace")
+def http_get(url: str, attempts: int = 3) -> str:
+    """带指数退避重试的 GET（v11 审查 3.3）：网络抖动不再单发即挂周更。
+
+    attempts=3，间隔 2s / 4s；全部失败抛最后一个异常，由调用方按源粒度
+    记入 failed（任一源失败 ⇒ 不落盘 manifest ⇒ 工作流失败 ⇒ 不提交）。
+    """
+    last: Exception = RuntimeError("unreachable")
+    for i in range(attempts):
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": UA})
+            with urllib.request.urlopen(req, timeout=120) as r:
+                return r.read().decode("utf-8", "replace")
+        except Exception as e:                                   # noqa: BLE001
+            last = e
+            if i < attempts - 1:
+                time.sleep(2 ** (i + 1))
+    raise last
 
 
 def read_text(p: Path) -> str:

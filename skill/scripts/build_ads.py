@@ -43,6 +43,7 @@ lite 是 16 源浓缩的另一条路线，Jinx 是第三条。三者互补，并
 ②b 投毒熔断：CIRCUIT_BREAKER 根域精确出现在输入即拒绝发布（绝不静默剔除）
 ③ MUST_CONTAIN 必需域在位         ④ direct 放行清单非空（顺序保护的前提）
 ⑤ 独立基线覆盖率 ≥ 护栏           ⑥ 规模护栏   ⑦ 无重复
+⑤b B 支路采纳率：全局带宽 + 单源哨兵（准入判据失效自爆，v11 审查 3.1）
 
 用法
 ====
@@ -160,6 +161,18 @@ CIRCUIT_BREAKER = {
 #    但正式产出请把新值写回这里，别只靠临时参数。
 COVERAGE_FLOOR = 0.85
 SIZE_RANGE = (5000, 15000)
+# B 支路采纳率护栏（v11 审查 3.1 的落地形态）：AWAvenue 既是 B 支路输入又是
+# 覆盖率基线，「准入判据失效致全量进产物」它测不出来 —— 采纳率直接测判据本身。
+# 实测基线（2026-10-27）：全局 13.9%；各源 5.0% ~ 84.2%。
+#   全局带宽 (0.03, 0.60)：判据「恒真」⇒ 全局奔 100%；「恒假」⇒ 奔 0。带宽极宽，
+#     正常上游漂移不会触碰，触线必是结构性失效。
+#   单源哨兵 >0.98：某源几乎全收（判据对该源恒真）——给正常改善留了 14 个点的
+#     余量（AWAvenue 现 84.2%）。
+#   单源空转哨兵 =0（原始 ≥50 条才查）：某源全军覆没（判据对该源恒假）。
+# 判据变了要重新实测各源比率并把带宽/哨兵写回这里，别只靠临时参数。
+B_ADOPTION_BAND = (0.03, 0.60)
+B_ADOPTION_MAX_PER_SOURCE = 0.98
+B_ADOPTION_ZERO_MIN_RAW = 50
 
 MULTI_SUFFIX = {
     "com.cn", "net.cn", "org.cn", "gov.cn", "edu.cn",
@@ -597,6 +610,22 @@ def main() -> int:
     if coverage is not None and coverage < args.coverage_floor:
         errs.append("独立基线覆盖率 %.1f%% 低于护栏 %.0f%%"
                     % (coverage * 100, args.coverage_floor * 100))
+    # ⑤b B 支路采纳率（v11 审查 3.1）：统计口径与 B 支路准入完全同构是**有意的**
+    # —— 这条护栏要抓的就是准入判据自身的失效，看的就是同一批数。
+    _b_raw = sum(s["拦截 域名级(原始)"] for _, s in stat_b.values())
+    _b_keep = sum(s["准入后(采用)"] for _, s in stat_b.values())
+    _b_ratio = _b_keep / _b_raw if _b_raw else None
+    if _b_ratio is not None and not (B_ADOPTION_BAND[0] <= _b_ratio <= B_ADOPTION_BAND[1]):
+        errs.append("B 支路全局采纳率 %.1f%% 超出带宽 %s（准入判据疑似失效）"
+                    % (_b_ratio * 100, B_ADOPTION_BAND))
+    for label, (_, s) in stat_b.items():
+        raw_n, keep_n = s["拦截 域名级(原始)"], s["准入后(采用)"]
+        if raw_n >= B_ADOPTION_ZERO_MIN_RAW and keep_n == 0:
+            errs.append("B 支路 [%s] 采纳 0/%d（判据对该源恒假）" % (label, raw_n))
+        if raw_n and keep_n / raw_n > B_ADOPTION_MAX_PER_SOURCE:
+            errs.append("B 支路 [%s] 采纳率 %.1f%% 超哨兵 %.0f%%（判据对该源疑似恒真）"
+                        % (label, keep_n / raw_n * 100,
+                           B_ADOPTION_MAX_PER_SOURCE * 100))
     if not (size_range[0] <= len(final) <= size_range[1]):
         errs.append("产物规模 %d 超出护栏 %s" % (len(final), size_range))
     if len(final) != len(fset):
@@ -639,6 +668,10 @@ def main() -> int:
         "  【参考】Jinx·中国生态 %d 条 → 覆盖 %d 条 = %s"
         % (len(j_cn), j_hit,
            ("%.1f%%" % (cov_jinx * 100)) if cov_jinx is not None else "未测"),
+        "  【断言·采纳率】B 支路全局 %d/%d = %s（带宽 %s）；单源哨兵 %.0f%%"
+        % (_b_raw, _b_keep,
+           ("%.1f%%" % (_b_ratio * 100)) if _b_ratio is not None else "未测",
+           B_ADOPTION_BAND, B_ADOPTION_MAX_PER_SOURCE * 100),
         "",
         "六、与 direct 放行清单的重叠（不删除，靠顺序保护）",
     ]
