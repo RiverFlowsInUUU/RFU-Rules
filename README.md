@@ -179,11 +179,19 @@ DNS 层拒答（可选）与组名改法见[详情](DetailsReadme/DetailsReadme.
 
 ## 📚 来源
 
-| <div align="center">来源</div> | <div align="center">说明</div> |
+本仓站在七个上游的肩上，名单如下 —— 各归其位，皆可溯源：
+
+| 来源 | 本仓取用 |
 |:--|:--|
-| 📄 上游 | [`VME98/jinx-rules`](https://github.com/VME98/jinx-rules) · 数据 `3.2.3` · `2026-10-18` |
-| 🧩 其余 | `217heidai/adblockfilters` · AdGuard Chinese · 秋风 AWAvenue · CJX · xinggsf · jiekouAD（共六个，快照落盘 `upstream/`） |
-| 📜 许可 | 数据归各上游，异议即下架；脚本与文档 MIT |
+| [VME98/jinx-rules](https://github.com/VME98/jinx-rules) | 基线主源 · 黑白名单明文 · 数据 `3.2.3`（2026-10-18 冻结） |
+| [217heidai/adblockfilters](https://github.com/217heidai/adblockfilters) | 聚合规则站 · lite 档与 china 直连清单 |
+| [TG-Twilight/AWAvenue-Ads-Rule](https://github.com/TG-Twilight/AWAvenue-Ads-Rule) | 秋风规则 · 国内 App 广告 |
+| [AdguardTeam/AdguardFilters](https://github.com/AdguardTeam/AdguardFilters) | AdGuard 中文过滤器 |
+| [cjx82630/cjxlist](https://github.com/cjx82630/cjxlist) | CJX's Annoyance List · 中文骚扰补充 |
+| [xinggsf/Adblock-Plus-Rule](https://github.com/xinggsf/Adblock-Plus-Rule) | 视频广告规则 |
+| [damengzhu/banad](https://github.com/damengzhu/banad) | jiekouAD · 接口广告收集 |
+
+快照全部落盘在 `upstream/`，构建不联网。数据版权归各上游，本仓不主张；任一上游作者有异议，开 issue 即下架对应来源。
 
 ---
 

@@ -50,7 +50,7 @@ def main():
     ap.add_argument('--repo', required=True)
     ap.add_argument('--private', action='store_true', help='default is public')
     ap.add_argument('--files', nargs='+', required=True)
-    ap.add_argument('--description', default='Ad-block ruleset for mihomo / Surge / Egern / sing-box (Chinese ad·stats·privacy·PCDN domains, frozen Jinx 3.2.3 baseline)')
+    ap.add_argument('--description', default='Ad-block ruleset — one list, four engines: mihomo / Surge / Egern / sing-box')
     args = ap.parse_args()
     if not args.token:
         sys.exit('❌ 缺令牌：用 --token <PAT>，或先 export GITHUB_TOKEN=<PAT>'
