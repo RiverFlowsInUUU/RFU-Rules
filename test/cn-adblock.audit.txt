@@ -1,0 +1,129 @@
+构建审计 / cn-adblock
+==============================================================
+
+一、各源解析明细
+  [AWAvenue]
+    其他(丢弃)                            4
+    拦截 域名级(原始)                      969
+      └ 成簇命中                        729
+      └ 语义命中                        580
+    孤立且无语义(剔除)                      109
+    拦截 域名级(采用)                      860
+  [CJX]
+    条件/路径型拦截(不可表达)                  604
+    其他(丢弃)                           11
+    cosmetic(不可表达)                 1082
+    例外 条件/路径型(不可表达)                   6
+    IP/CIDR(剔除)                       1
+    拦截 域名级(原始)                      115
+      └ 成簇命中                         28
+      └ 语义命中                         44
+    孤立且无语义(剔除)                       51
+    拦截 域名级(采用)                       64
+  [xinggsf]
+    cosmetic(不可表达)                   36
+    例外 条件/路径型(不可表达)                   4
+    条件/路径型拦截(不可表达)                   65
+    其他(丢弃)                            2
+    拦截 域名级(原始)                       27
+      └ 成簇命中                         12
+      └ 语义命中                          9
+    孤立且无语义(剔除)                       10
+    拦截 域名级(采用)                       17
+  [AdGuard-CN]
+    条件/路径型拦截(不可表达)                 5865
+    其他(丢弃)                          160
+    例外 条件/路径型(不可表达)                1143
+    cosmetic(不可表达)                 7243
+    IP/CIDR(剔除)                       5
+    例外 域名级(采用)                       11
+    拦截 域名级(原始)                     5761
+      └ 成簇命中                        254
+      └ 语义命中                        177
+    孤立且无语义(剔除)                     5360
+    拦截 域名级(采用)                      401
+  [jiekouAD]
+    其他(丢弃)                           33
+    IP/CIDR(剔除)                       5
+    例外 条件/路径型(不可表达)                  28
+    例外 域名级(采用)                        4
+    条件/路径型拦截(不可表达)                  456
+    cosmetic(不可表达)                  327
+    拦截 域名级(原始)                     4508
+      └ 成簇命中                        350
+      └ 语义命中                        316
+    孤立且无语义(剔除)                     3985
+    拦截 域名级(采用)                      523
+
+二、漏斗
+  各源采用合计（去重前）      : 1865
+  去重后拦截集                : 1657
+  扣除 @@ 域名级例外（15 条）   : -1
+  语义上提后                  : 1625
+  与 guard 冲突剔除（8 条）    : -8
+  最终产物                    : 1617
+
+三、语义上提明细（50 条）
+  adxserver.ad.cmvideo.cn                        -> ad.cmvideo.cn
+  api.ad.xiaomi.com                              -> ad.xiaomi.com
+  api.ssp.xcultur.com                            -> ssp.xcultur.com
+  auction.unityads.unity3d.com                   -> unityads.unity3d.com
+  b1-data.ads.heytapmobi.com                     -> ads.heytapmobi.com
+  bdapi.ads.oppomobile.com                       -> ads.oppomobile.com
+  bj.ad.track.66mobi.com                         -> ad.track.66mobi.com
+  c2.gdt.qq.com                                  -> gdt.qq.com
+  canvas-cdn.gdt.qq.com                          -> gdt.qq.com
+  ck.ads.oppomobile.com                          -> ads.oppomobile.com
+  config.unityads.unity3d.com                    -> unityads.unity3d.com
+  data.ads.oppomobile.com                        -> ads.oppomobile.com
+  de.ad.gameley.com                              -> ad.gameley.com
+  diagnosis.ad.xiaomi.com                        -> ad.xiaomi.com
+  e.ad.xiaomi.com                                -> ad.xiaomi.com
+  edge.ads.twitch.tv                             -> ads.twitch.tv
+  globalapi.ad.xiaomi.com                        -> ad.xiaomi.com
+  h5.analytics.126.net                           -> analytics.126.net
+  ii.gdt.qq.com                                  -> gdt.qq.com
+  jp.ad.gameley.com                              -> ad.gameley.com
+  m.ad.zhangyue.com                              -> ad.zhangyue.com
+  mi.gdt.qq.com                                  -> gdt.qq.com
+  otheve.beacon.qq.com                           -> beacon.qq.com
+  q.i.gdt.qq.com                                 -> gdt.qq.com
+  rpt.gdt.qq.com                                 -> gdt.qq.com
+  rr.tracker.mobiletracking.ru                   -> tracker.mobiletracking.ru
+  sdk.ad.smaato.net                              -> ad.smaato.net
+  sdk.adx.adwangmai.com                          -> adx.adwangmai.com
+  sdk.mobads.adwangmai.com                       -> mobads.adwangmai.com
+  sdkconfig.ad.intl.xiaomi.com                   -> ad.intl.xiaomi.com
+  sdkconfig.ad.xiaomi.com                        -> ad.xiaomi.com
+  sms.ads.oppomobile.com                         -> ads.oppomobile.com
+  stg-data.ads.heytapmobi.com                    -> ads.heytapmobi.com
+  t.track.ad.xiaomi.com                          -> track.ad.xiaomi.com
+  t7z.cupid.iqiyi.com                            -> cupid.iqiyi.com
+  t7z.cupid.ptqy.gitv.tv                         -> cupid.ptqy.gitv.tv
+  target.ads.jihuoniao.com                       -> ads.jihuoniao.com
+  test.ad.xiaomi.com                             -> ad.xiaomi.com
+  test.e.ad.xiaomi.com                           -> ad.xiaomi.com
+  uapi.ads.heytapmobi.com                        -> ads.heytapmobi.com
+  v.adx.hubcloud.com.cn                          -> adx.hubcloud.com.cn
+  v2.gdt.qq.com                                  -> gdt.qq.com
+  v2mi.gdt.qq.com                                -> gdt.qq.com
+  v3.gdt.qq.com                                  -> gdt.qq.com
+  volc.bj.ad.track.66mobi.com                    -> ad.track.66mobi.com
+  webview.unityads.unity3d.com                   -> unityads.unity3d.com
+  win.gdt.qq.com                                 -> gdt.qq.com
+  xc.gdt.qq.com                                  -> gdt.qq.com
+  yk-ssp.ad.youku.com                            -> ad.youku.com
+  zeus.ad.xiaomi.com                             -> ad.xiaomi.com
+
+四、与 guard 白名单冲突（已剔除，8 条）
+  apd-pcdnwxlogin.teg.tencent-cloud.net
+  apd-pcdnwxnat.teg.tencent-cloud.net
+  apd-pcdnwxstat.teg.tencent-cloud.net
+  appcfg.v.qq.com
+  sdkapi.cloooud.com
+  tnc3-aliec2.snssdk.com
+  tnc3-alisc1.snssdk.com
+  tnc3-bjlgy.snssdk.com
+
+五、断言
+  PASS 形态 / 无通配 / 例外减法 / guard 一致 / 无重复 / 灰产准入 —— 全部通过
