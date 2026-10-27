@@ -173,7 +173,7 @@ DNS 层拒答（可选）与组名改法见[详情](DetailsReadme/DetailsReadme.
 |:--|:--|
 | 📘 [`DetailsReadme`](DetailsReadme/DetailsReadme.md) | 数据从哪来 · 为何这么取舍 · 转换原理 · 一致性保证 |
 | 🧪 [`skill/SKILL.md`](skill/SKILL.md) | 构建链 · 断言口径 · 加新源流程 |
-| 🔨 想本地构建？ | `bash skill/scripts/regen.sh` —— 一条命令重跑六份产物 + 双闸门 |
+| 🔨 想本地构建？ | `bash skill/scripts/regen.sh` —— 一条命令重跑六份产物 + 双闸门（Windows 需 Git Bash 或 WSL） |
 | 🧷 [`OVERLAP.md`](OVERLAP.md) · [`WHITELIST-SLIM.md`](WHITELIST-SLIM.md) | 重叠清单 · 瘦身留痕（构建生成，CI 校验） |
 | 📄 [`NOTICE.md`](NOTICE.md) | 来源与使用条件（数据 vs 脚本分开授权） |
 | 📅 [`CHANGELOG.md`](CHANGELOG.md) | 变动记录 |

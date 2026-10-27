@@ -48,12 +48,15 @@ direct 仍由上游白名单瘦身而来。两者都只读 `upstream/`，**构�
  12. 白名单 × 拦截集重叠清单（OVERLAP.md）与当前产物一致 —— 独立复算，
      防「清单写的和产物算的不是一回事」。这是本仓唯一对外可见的风险清单。
  13. 段号引用与段数声明 == 真实段标/段数 —— ①「第 N 段」的 N 必须在段标里
-     （数字限两位，与②护栏对齐）；②声明位文件里的裸「N 段」必须等于编号段总数。
-     两类都是手写常量、随拆分漂移，此类失真已发生五次且前四次全靠外部审查抓出
-     （v5 3.3 提议 · v6 2.1 补②型 · v7 收窄②型范围并对齐护栏）。
+     （数字限两位，与②护栏对齐）；②声明位文件里的裸「N 段」必须等于编号段总数；
+     ③出现声明形态的文件必须登记 DECL_FILES；④ci.yml 与本文件 docstring 里的
+     「制造 N 种典型错误」必须等于 selftest_negative.py 的 @case 实数。
+     四类都是手写常量、随演进漂移，此类失真已发生六次且前五次全靠外部审查抓出
+     （v5 3.3 提议 · v6 2.1 补②型 · v7 收窄②型范围并对齐护栏 · v8 2.1 补③型
+     · v9 P3 补④型——负样本计数 12→18→20→21 漂了三次，同一族手写常量）。
 
 闸门自身可信度由 skill/tests/selftest_negative.py 保证：它在临时副本仓里
-制造 18 种典型错误，要求本脚本逐一判负 —— 防止闸门退化成「永远绿的空操作」。
+制造 22 种典型错误，要求本脚本逐一判负 —— 防止闸门退化成「永远绿的空操作」。
 其中每条负样本都经过「拆掉对应判据后必须翻红」的独立性反证，确保它是真的在
 测那一盘守卫，而不是靠另一次判负顺带被「抓到」。
 
@@ -1357,6 +1360,26 @@ def seg_section_refs(root, rep):
               '\nDECL_FILES 是手写清单，清单自己必须有枚举守卫（v8 审查 2.1）：'
               '要么把文件加进 seg_section_refs 的 DECL_FILES（它确属声明位），'
               '要么改措辞避开声明形态')
+    # ④ 负样本计数声明（v9 审查 P3-1/P3-2）：ci.yml 注释与本 docstring 里的
+    #    「制造 N 种典型错误」必须等于 selftest_negative.py 的 @case 实数。
+    #    该常量已漂移三次（12→18→20→21），与段号同属「手写常量随演进漂移」，
+    #    故纳入本段统一守 —— 计数以 @case 装饰器实数为准，声明错了判红。
+    st_path = root / 'skill' / 'tests' / 'selftest_negative.py'
+    n_cases = len(re.findall(r'(?m)^@case\(', st_path.read_text(encoding='utf-8')))
+    bad_n = []
+    for decl_rel in ('.github/workflows/ci.yml', 'skill/tests/verify_products.py'):
+        m_n = re.search(r'制造\s*(\d+)\s*种典型错误',
+                        (root / decl_rel).read_text(encoding='utf-8'))
+        if not m_n or int(m_n.group(1)) != n_cases:
+            bad_n.append((decl_rel, m_n.group(1) if m_n else '未声明'))
+    rep.judge(not bad_n, 'seg',
+              '负样本计数声明一致（@case 实数 %d，两处声明位吻合）' % n_cases
+              if not bad_n else
+              '负样本计数声明与实现不符（@case 实数 %d）' % n_cases,
+              '\n'.join('  %s → 写着 %s 种' % d for d in bad_n) +
+              '\n负样本数以 selftest_negative.py 的 @case 装饰器实数为准，'
+              '增删样本后须同步 ci.yml 注释与本文件 docstring 的声明'
+              ' —— 本判据让「忘同步」变成 CI 红，不再靠记性')
 
 
 # ---------------------------------------------------------------- main

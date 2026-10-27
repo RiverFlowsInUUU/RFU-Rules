@@ -419,6 +419,22 @@ def _(w):
                  encoding='utf-8')
 
 
+@case('负样本计数声明漂移（第 13 段④型）', '负样本计数')
+def _(w):
+    """把 ci.yml 注释里的「制造 N 种典型错误」改成错的数。
+
+    守第 13 段的④型（v9 审查 P3-1）：负样本计数是手写常量，已在
+    12→18→20→21 间漂移三次而无人报警 —— ④型让 @case 实数成为唯一真值，
+    ci.yml 与 verify docstring 的声明错了即判红。本样本即「忘同步」形态。
+    """
+    p = w / '.github' / 'workflows' / 'ci.yml'
+    t = p.read_text(encoding='utf-8')
+    m = re.search(r'制造\s*(\d+)\s*种典型错误', t)
+    assert m, '负样本失效：ci.yml 的负样本计数声明版式变了'
+    p.write_text(t[:m.start(1)] + str(int(m.group(1)) + 7) + t[m.end(1):],
+                 encoding='utf-8')
+
+
 def main():
     if not TARGET.is_file():
         print(f'❌ 前置不达标：找不到 {TARGET}')
@@ -485,7 +501,9 @@ def main():
             caught += 1
             hits = [l.strip() for l in out.splitlines() if l.strip().startswith('❌')]
             print(f'  ✅ {label}')
-            print(f'      exit=1，命中「{expect}」｜{hits[0] if hits else ""}')
+            # 展示全部命中行：一条样本可能被多段同时判负（如 emoji 宽度样本
+            # 会同时触发文案段与表格宽度段），只打第一条会让人误判成「靠别的段顺带」。
+            print(f'      exit=1，命中「{expect}」｜' + ' ｜ '.join(hits))
         else:
             missed += 1
             print(f'  ❌ {label}')
