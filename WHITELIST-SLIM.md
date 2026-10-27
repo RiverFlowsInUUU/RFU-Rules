@@ -2,12 +2,12 @@
 
 > 本文件由 `convert_ruleset.py --slim-report` 生成，**勿手改**。
 > 生成依据：upstream/jinx-3.2.3 的白名单（323 条）× 黑名单（DOMAIN-SUFFIX 语义）。
-> CI 独立复算并与此文件比对（verify_products.py 第 6b 段），不符即判负。
+> CI 独立复算并与此文件比对（verify_products.py 第 6c 段），不符即判负。
 
 **共 323 条上游白名单 → 保留 44（会被黑名单误杀）+ 裁掉 279（不被黑名单覆盖）**，
 另有手工追加条目见 `custom-direct.list`（不参与裁剪，直接进产物）。
 
-> 📌 口径说明：`共 N 条` 是**小写归一去重后**的构建输入口径（上游冻结快照里存在大小写变体，如 LOG-AUTH.FLYSLEEP.CN）；上游原始条数（含重复）见 version.json 的 domainWhitelistCount，由第 6b 段按**原始口径**另行校验。
+> 📌 口径说明：`共 N 条` 是**小写归一去重后**的构建输入口径（上游冻结快照里存在大小写变体，如 LOG-AUTH.FLYSLEEP.CN）；上游原始条数（含重复）见 version.json 的 domainWhitelistCount，由第 6b 段按**原始口径**另行校验；本表（消费口径）的比对在第 6c 段。
 
 ## 口径
 

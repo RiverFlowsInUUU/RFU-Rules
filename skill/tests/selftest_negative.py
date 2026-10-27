@@ -333,11 +333,11 @@ def _(w):
     p.write_text(t[:m.start(1)] + str(int(m.group(1)) - 1) + t[m.end(1):], encoding='utf-8')
 
 
-@case('瘦身留痕摘要数字写错（第 6b 段）', '瘦身留痕摘要: 声明')
+@case('瘦身留痕摘要数字写错（第 6c 段）', '瘦身留痕摘要: 声明')
 def _(w):
     """改 WHITELIST-SLIM.md 摘要行的保留数。
 
-    守第 6b 段新增的瘦身留痕判据：摘要三项（总/留/裁）与独立复算比对。
+    守第 6c 段的瘦身留痕判据：摘要三项（总/留/裁）与独立复算比对。
     """
     p = w / 'WHITELIST-SLIM.md'
     t = p.read_text(encoding='utf-8')
@@ -348,7 +348,7 @@ def _(w):
                  encoding='utf-8')
 
 
-@case('瘦身留痕漏一条保留行（第 6b 段）', '瘦身留痕 保留集合与复算不一致')
+@case('瘦身留痕漏一条保留行（第 6c 段）', '瘦身留痕 保留集合与复算不一致')
 def _(w):
     """删掉 WHITELIST-SLIM.md「保留」节的一行表格。
 
@@ -362,6 +362,22 @@ def _(w):
     j = next(k for k in range(i + 1, len(lines)) if lines[k].startswith('| `'))
     del lines[j]
     p.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+
+
+@case('段号引用指向不存在的段（第 13 段）', '指向不存在的段标')
+def _(w):
+    """往 README 里塞一处「第 99 段」。
+
+    守第 13 段：段号是手写常量、已四次随拆分漂移（前三次全靠外部审查抓出），
+    本判据让这类失真自己叫。选 NOTICE 表格行下刀 —— 不碰任何被第 5 段
+    正则锚定的读数，保证样本只触发本段。
+    """
+    p = w / 'README.md'
+    t = p.read_text(encoding='utf-8')
+    old = '（数据 vs 脚本分开授权） |'
+    assert old in t, '负样本失效：README 的 NOTICE 行版式变了'
+    p.write_text(t.replace(old, '（数据 vs 脚本分开授权）（第 99 段） |', 1),
+                 encoding='utf-8')
 
 
 def main():

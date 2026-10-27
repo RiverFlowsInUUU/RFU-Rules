@@ -1,6 +1,6 @@
 ---
 name: rfu-rules-maintain
-description: 维护 RFU-Rules 这份「中文广告 / 统计 / 隐私 / PCDN 域名规则集」—— 冻结上游快照、三支路合成、三平台产物生成、15 段一致性断言与负样本自测，以及加新源 / 加新平台 / 改文件名三类结构性改动的一次性全套清单。含跨平台规则语义映射（mihomo / Surge / Egern / sing-box）、白名单瘦身与顺序保护、Surge pre-matching 与 extended-matching 的硬约束、README 交付规范。触发词：RFU-Rules、规则集维护、加规则源、三支路合成、freeze_upstream、build_ads、convert_ruleset、DOMAIN-SUFFIX、rule-provider、RULE-SET、去广告规则仓库、白名单瘦身、快照冻结。
+description: 维护 RFU-Rules 这份「中文广告 / 统计 / 隐私 / PCDN 域名规则集」—— 冻结上游快照、三支路合成、三平台产物生成、16 段一致性断言与负样本自测，以及加新源 / 加新平台 / 改文件名三类结构性改动的一次性全套清单。含跨平台规则语义映射（mihomo / Surge / Egern / sing-box）、白名单瘦身与顺序保护、Surge pre-matching 与 extended-matching 的硬约束、README 交付规范。触发词：RFU-Rules、规则集维护、加规则源、三支路合成、freeze_upstream、build_ads、convert_ruleset、DOMAIN-SUFFIX、rule-provider、RULE-SET、去广告规则仓库、白名单瘦身、快照冻结。
 agent_created: true
 ---
 
@@ -242,12 +242,12 @@ RULE-SET,https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/surge-
 ## 断言口径
 
 ```bash
-python skill/tests/verify_products.py      # 15 段，与 CI 同源
+python skill/tests/verify_products.py      # 16 段，与 CI 同源
 python skill/tests/selftest_negative.py    # 负样本：证明闸门本身能抓错
 ```
 
-15 段：产物存在 · 三格式条数一致 · **跨格式逐条语义等价** · 表头自述 · 文档条数 · **文档上游版本号** · **产物 == 生成链重跑** · **冻结快照自述 + sha256 完整性** · **瘦身留痕（WHITELIST-SLIM.md）== 独立复算** · `custom-*.list` 落盘 · 文案规范 · 行尾与 BOM · 平台清单齐备 · 表格 emoji 宽度 ·
-**`OVERLAP.md` 与产物一致**。
+16 段：产物存在 · 三格式条数一致 · **跨格式逐条语义等价** · 表头自述 · 文档条数 · **文档上游版本号** · **产物 == 生成链重跑** · **冻结快照自述 + sha256 完整性** · **瘦身留痕（WHITELIST-SLIM.md）== 独立复算** · `custom-*.list` 落盘 · 文案规范 · 行尾与 BOM · 平台清单齐备 · 表格 emoji 宽度 ·
+**`OVERLAP.md` 与产物一致** · **段号引用 == 真实段标**。
 
 退出码四态：`0` 过 / `1` 判负 / `2` 环境不达标 / `3` SKIP。**SKIP 走独立码，不借 0 蒙混** —— 「未验证 ≠ 绿」。
 

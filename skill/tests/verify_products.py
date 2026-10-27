@@ -24,7 +24,7 @@ direct 仍由上游白名单瘦身而来。两者都只读 `upstream/`，**构�
   python skill/tests/verify_products.py          # 在仓根执行
   python skill/tests/verify_products.py --root . # 显式指定仓根
 
-断言清单（15 段，执行顺序）:
+断言清单（16 段，执行顺序）:
   1. 六份产物存在且非空
   2. 三格式条数一致（ads 三份互等 / direct 三份互等）
   3. 跨格式语义等价（归一化后逐条比对，不是只比条数）
@@ -47,6 +47,9 @@ direct 仍由上游白名单瘦身而来。两者都只读 `upstream/`，**构�
      否则带 U+FE0F 的那个会占两格、该行在宽字符字体下错位。
  12. 白名单 × 拦截集重叠清单（OVERLAP.md）与当前产物一致 —— 独立复算，
      防「清单写的和产物算的不是一回事」。这是本仓唯一对外可见的风险清单。
+ 13. 段号引用 == 真实段标 —— 仓内「第 N 段」的 N 必须存在于 rep.section 段标里。
+     「第 N 段」是手写常量，段号随拆分而变；此类漂移已发生四次且前三次都靠
+     外部审查抓出，本段让它自己叫（v5 审查 3.3）。
 
 闸门自身可信度由 skill/tests/selftest_negative.py 保证：它在临时副本仓里
 制造 18 种典型错误，要求本脚本逐一判负 —— 防止闸门退化成「永远绿的空操作」。
@@ -1239,6 +1242,64 @@ def seg_overlap(root, rep):
               ('缺失: ' + ', '.join(missing[:5]) if missing else ''))
 
 
+def seg_section_refs(root, rep):
+    """第 13 段：仓内所有「第 N 段」引用必须指向真实段标。
+
+    动机（2026-10-27 v5 审查 3.3）：「第 N 段」是散落在文档与生成器里的**手写常量**，
+    而段号随拆分/新增而变 —— 这类漂移已发生四次（总段数与段标数不一致 ×2、
+    段标与内容不符、生成器硬编码段号在同一次拆分中失效），前三次都靠外部审查抓出。
+    本段让第四类「自己叫」。
+
+    判据：提取本脚本全部 rep.section(...) 的段标 id 作为真值；
+    扫描仓内文本（排除 CHANGELOG 历史记录、upstream/、build/、.git/），
+    每一处「第 N 段」的 N 必须在真值里。
+    """
+    rep.section('13. 段号引用 == 真实段标')
+    src = Path(__file__).read_text(encoding='utf-8')
+    labels = set(re.findall(r"rep\.section\('([0-9]+[a-z]?)\.", src))
+    if not labels:
+        rep.judge(False, 'seg', '无法从本脚本提取段标（源码版式变了？）',
+                  "判据依赖 rep.section('N. ...') 的字面量形式")
+        return
+
+    def _key(n):
+        m = re.match(r'(\d+)([a-z]?)', n)
+        return (int(m.group(1)), m.group(2))
+
+    bad, scanned = [], 0
+    for p in root.rglob('*'):
+        if not p.is_file():
+            continue
+        rel = p.relative_to(root).as_posix()
+        if (rel.startswith(('upstream/', 'build/', '.git/', '.workbuddy/'))
+                or rel == 'CHANGELOG.md'          # 历史记录描述的是当时状态，不参与
+                or rel == 'skill/tests/selftest_negative.py'):
+            # ↑ 负样本本体刻意含有假段号（制造不存在段标的样本），是本判据的测试病灶，
+            #   不是失真 —— 排除。首跑时它连同本注释的初版措辞一起被扫出来过，
+            #   属于预期内的自指。
+            continue
+        if p.suffix not in ('.md', '.py', '.sh', '.yml', '.yaml', '.txt', '.json', '.list'):
+            continue
+        try:
+            text = p.read_text(encoding='utf-8', errors='replace')
+        except Exception:                       # noqa: BLE001
+            continue
+        for m in re.finditer(r'第\s*([0-9]+[a-z]?)\s*段', text):
+            scanned += 1
+            if m.group(1) not in labels:
+                bad.append((rel, m.group(1)))
+    rep.judge(not bad, 'seg',
+              '段号引用一致（扫描 %d 处引用，真实段标 %d 个：%s）'
+              % (scanned, len(labels), ' '.join(sorted(labels, key=_key)))
+              if not bad else
+              '%d 处「第 N 段」指向不存在的段标' % len(bad),
+              '\n'.join('  %s → 第 %s 段（现有段标：%s）'
+                        % (r, n, ' '.join(sorted(labels, key=_key)))
+                        for r, n in bad[:6]) +
+              '\n段号是手写常量：拆分/新增段时必须同步改全部引用，'
+              '或直接以段名相称（如「瘦身留痕段」）避免硬编码')
+
+
 # ---------------------------------------------------------------- main
 
 def collect_counts(root):
@@ -1279,6 +1340,7 @@ def run(root):
     seg_platform_coverage(root, rep)
     seg_table_emoji_width(root, rep)
     seg_overlap(root, rep)
+    seg_section_refs(root, rep)
 
     print(rep.render())
     print()

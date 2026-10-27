@@ -210,7 +210,9 @@ def write_slim_report(path, all_entries, kept, label):
     此前裁剪结果只打印在 stdout —— 仓内零记录。将来有人问
     "为什么 jpush.cn 在放行清单里、而 github.com 不在"，仓库答不上来。
     现在保留/裁掉两个集合连同各自的依据落盘成 markdown，
-    verify_products.py 第 6b 段会独立复算并与此文件比对。
+    verify_products.py 第 6c 段会独立复算并与此文件比对。
+    ⚠️ 段号是手写常量：拆分/新增段时要同步改这里，第 13 段会扫描全仓「第 N 段」
+    引用与真实段标比对 —— 写错会被 CI 抓到（本文件曾因 6b→6c 拆分漏改而指向错段）。
     """
     kept_set = {e for e, _ in kept}
     dropped = [e for e in all_entries if e not in kept_set]
@@ -219,7 +221,7 @@ def write_slim_report(path, all_entries, kept, label):
         "",
         "> 本文件由 `convert_ruleset.py --slim-report` 生成，**勿手改**。",
         "> 生成依据：%s 的白名单（%d 条）× 黑名单（DOMAIN-SUFFIX 语义）。" % (label, len(all_entries)),
-        "> CI 独立复算并与此文件比对（verify_products.py 第 6b 段），不符即判负。",
+        "> CI 独立复算并与此文件比对（verify_products.py 第 6c 段），不符即判负。",
         "",
         "**共 %d 条上游白名单 → 保留 %d（会被黑名单误杀）+ 裁掉 %d（不被黑名单覆盖）**，"
         % (len(all_entries), len(kept), len(dropped)),
@@ -227,7 +229,8 @@ def write_slim_report(path, all_entries, kept, label):
         "",
         "> 📌 口径说明：`共 N 条` 是**小写归一去重后**的构建输入口径（上游冻结快照里"
         "存在大小写变体，如 LOG-AUTH.FLYSLEEP.CN）；上游原始条数（含重复）见"
-        " version.json 的 domainWhitelistCount，由第 6b 段按**原始口径**另行校验。",
+        " version.json 的 domainWhitelistCount，由第 6b 段按**原始口径**另行校验；"
+        "本表（消费口径）的比对在第 6c 段。",
         "",
         "## 口径",
         "",

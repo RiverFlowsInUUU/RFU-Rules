@@ -196,7 +196,7 @@ RFU-Rules/
 ├── 🏗️ build/           # 三支路合成的中间结果（gitignore，不入库；产物在根目录）
 ├── 🧪 skill/
 │   ├── 📄 scripts/     # freeze_upstream.py · build_ads.py · convert_ruleset.py · regen.sh
-│   └── ✅ tests/       # verify_products.py（15 段断言）· selftest_negative.py（负样本）
+│   └── ✅ tests/       # verify_products.py（16 段断言）· selftest_negative.py（负样本）
 ├── 🔁 .github/         # CI：每次提交自动跑上述两个脚本
 ├── 📐 .gitattributes   # 全仓文本 eol=lf（跨平台产物逐字节可复现）
 └── 📁 DetailsReadme/   # 本文档
@@ -208,7 +208,7 @@ RFU-Rules/
 
 ## ✅ 8 一致性保证与验收
 
-🧱 本仓对外承诺三条：**三端逐条等价、产物只能由生成链产出、条数与文档一致**。它由 `.github/workflows/ci.yml` 在每次 push / PR 自动校验，闸门是 [`skill/tests/verify_products.py`](../skill/tests/verify_products.py)（15 段）：
+🧱 本仓对外承诺三条：**三端逐条等价、产物只能由生成链产出、条数与文档一致**。它由 `.github/workflows/ci.yml` 在每次 push / PR 自动校验，闸门是 [`skill/tests/verify_products.py`](../skill/tests/verify_products.py)（16 段）：
 
 | 段 | 守什么 |
 |:-:|:-------|
@@ -227,6 +227,7 @@ RFU-Rules/
 | 10 | 平台清单齐备（仓库简介 / README / 本文档 / SKILL 都要列全平台） |
 | 11 | 表格内 emoji 宽度一致（带 `U+FE0F` 的会占两格、导致该行错位） |
 | 12 | `OVERLAP.md` 与当前产物一致 —— 独立复算重叠集合，摘要五项 + 逐条清单都要对上 |
+| 13 | 仓内「第 N 段」引用 == 真实段标 —— 段号是手写常量，已四次随拆分漂移 |
 
 🔒 **6b 段为什么重要**：它挡的是「有人手改了 `upstream/` 里的文件」。手改上游等于悄悄换了合并基线，而第 6 段只会照着被改过的源重跑 —— 照样全绿。所以快照完整性必须单独校验。
 
