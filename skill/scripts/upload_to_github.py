@@ -47,7 +47,7 @@ def main():
     ap.add_argument('--repo', required=True)
     ap.add_argument('--private', action='store_true', help='default is public')
     ap.add_argument('--files', nargs='+', required=True)
-    ap.add_argument('--description', default='Ad-block ruleset for mihomo / Surge / Egern / sing-box (Chinese ad·stats·PCDN domains, frozen Jinx 3.2.3 baseline)')
+    ap.add_argument('--description', default='Ad-block ruleset for mihomo / Surge / Egern / sing-box (Chinese ad·stats·privacy·PCDN domains, frozen Jinx 3.2.3 baseline)')
     args = ap.parse_args()
 
     status, me = call(API + '/user', args.token)

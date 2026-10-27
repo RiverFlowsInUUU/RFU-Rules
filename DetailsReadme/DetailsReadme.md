@@ -40,7 +40,17 @@ A 8480  +  B 1392  +  C 3815
 
 ⚖️ **为什么必须三支路**：只用 B 支路时对 Jinx·中国生态的覆盖率是 46.8%。拆开数了一遍，缺口里 **85% 不是被筛掉，而是那 5 个源里根本没有**（`a.alimama.cn`、`acookie.alimama.com` 之类）。lite 是 16 源浓缩的另一条路线，Jinx 是第三条，三者互补——并联后覆盖率 95.4%。
 
-🚫 **灰产怎么被挡在外面**：不靠人逐条判断，靠结构判据。灰产的形态是「随机域名 + 归属域下孤立 1 条」，而真平台至少满足「归属域成簇（≥2 条）」或「名称含广告/统计/PCDN 语义词元」之一。二者都不满足的自动出局——实测因此剔除 1934 条，且不需要人工过目。
+🚫 **灰产怎么被挡在外面**：不靠人逐条判断，靠结构判据。灰产的形态是「随机域名 + 归属域下孤立 1 条」，而真平台至少满足「归属域成簇（≥2 条）」或「名称含广告/统计/PCDN 语义词元」之一。
+
+⚖️ 三个支路**不等权**，判据也不同：
+
+| 支路 | 施加的过滤 |
+|:-:|:--|
+| A 217heidai lite | 剔「孤立 1 条 + 元音比例低 + 含数字」的随机域（本轮剔除 1934 条） |
+| B 5 个中文源 | 准入 = 成簇(≥2) **或** 含语义，两者皆无者出局 |
+| C Jinx 3.2.3 | **不过滤** —— 它是人工维护的成品清单，再筛一遍会误删真广告 |
+
+📌 因此产物里仍有 93 条形态随机的域名（占 1.0%），其中 40 条来自 C 支路。这是有意的取舍：宁可留一点噪声，不动可信源的判断。
 
 🧩 **白名单怎么来的**：上游白名单（324 条）中会被黑名单命中的 **44 条**，加 **5 条**手工补充（`*.tange365.com`，「小鲸看看」相机 App 的账户 / 设备 / 云存储域；`*.wechatos.net`，用户指定放行；`*.za.group`，众安银行 App 业务域，2026-10-10 实测；`*.itunes.apple.com`，用户指定「任何前缀 + itunes.apple.com」直连；`*.aspect-upush.umeng.com`，友盟推送建连入口，2026-10-27 追加），共 49 条。
 
@@ -180,9 +190,10 @@ RFU-Rules/
 ├── 🔵 sing-box-*.json  # 2 份，与 mihomo 一一对应（rule-set source 格式）
 ├── 📝 custom-*.list    # 2 份人工维护源（--extra / --extra-white）
 ├── 📦 upstream/        # 冻结的上游快照 + manifest.json（构建输入，勿手改）
+├── 🏗️ build/           # 三支路合成的中间结果（gitignore，不入库；产物在根目录）
 ├── 🧪 skill/
 │   ├── 📄 scripts/     # freeze_upstream.py · build_ads.py · convert_ruleset.py · regen.sh
-│   └── ✅ tests/       # verify_products.py（12 段断言）· selftest_negative.py（负样本）
+│   └── ✅ tests/       # verify_products.py（13 段断言）· selftest_negative.py（负样本）
 ├── 🔁 .github/         # CI：每次提交自动跑上述两个脚本
 ├── 📐 .gitattributes   # 全仓文本 eol=lf（跨平台产物逐字节可复现）
 └── 📁 DetailsReadme/   # 本文档
@@ -194,7 +205,7 @@ RFU-Rules/
 
 ## ✅ 8 一致性保证与验收
 
-🧱 本仓对外承诺三条：**三端逐条等价、产物只能由生成链产出、条数与文档一致**。它由 `.github/workflows/ci.yml` 在每次 push / PR 自动校验，闸门是 [`skill/tests/verify_products.py`](../skill/tests/verify_products.py)（12 段）：
+🧱 本仓对外承诺三条：**三端逐条等价、产物只能由生成链产出、条数与文档一致**。它由 `.github/workflows/ci.yml` 在每次 push / PR 自动校验，闸门是 [`skill/tests/verify_products.py`](../skill/tests/verify_products.py)（13 段）：
 
 | 段 | 守什么 |
 |:-:|:-------|

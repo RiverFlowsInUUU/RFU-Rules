@@ -1,6 +1,7 @@
 {
-  "frozen_at": "2026-10-27T03:54:41+00:00",
+  "frozen_at": "2026-10-27T04:22:16+00:00",
   "policy": "上游一律冻结，构建只读 upstream/，不联网。要更新跑 skill/scripts/freeze_upstream.py。",
+  "hash_basis": "bytes 与 sha256 均按换行归一化（LF）后的文本计算，与仓库内 .gitattributes 的 eol=lf 一致。",
   "jinx_commit": "c85751d",
   "sources": [
     {
@@ -71,7 +72,7 @@
       "path": "cn/AdGuard_Chinese_filter.txt",
       "url": "https://raw.githubusercontent.com/217heidai/adblockfilters/main/rules/AdGuard_Chinese_filter.txt",
       "sha256": "ee6ab97f420551ca382f8b7457e21411fe301250a9d6871ae61057038052b57b",
-      "bytes": 754584,
+      "bytes": 732689,
       "lines": 21095,
       "note": "AdGuard 官方中文过滤器"
     },

@@ -105,6 +105,8 @@ def build_manifest(rows: list[dict]) -> dict:
         "frozen_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
         "policy": "上游一律冻结，构建只读 upstream/，不联网。要更新跑 "
                   "skill/scripts/freeze_upstream.py。",
+        "hash_basis": "bytes 与 sha256 均按换行归一化（LF）后的文本计算，"
+                      "与仓库内 .gitattributes 的 eol=lf 一致。",
         "jinx_commit": JINX_COMMIT,
         "sources": rows,
     }
@@ -130,16 +132,23 @@ def cmd_freeze() -> int:
             continue
         lines = [l for l in text.splitlines() if l.strip() and not l.startswith("#")]
         write_text(dest, text)
+        # ⚠️ 体积与 sha 必须同基准：一律按「换行归一化后的文本」计。
+        #    曾用 stat().st_size（原始字节）记体积、却用 read_text()（归一化）算 sha ——
+        #    AdGuard_Chinese_filter 原始是 CRLF（754584 字节），仓库里经
+        #    .gitattributes 的 eol=lf 归一化后是 732689 字节，清单那一栏于是对谁都对不上
+        #    （校验本身不受影响，因为两边都按归一化文本算）。
+        norm = read_text(dest)
         rows.append({
             "group": group,
             "path": group + "/" + rel,
             "url": url,
-            "sha256": sha256_text(read_text(dest)),
-            "bytes": dest.stat().st_size,
+            "sha256": sha256_text(norm),
+            "bytes": len(norm.encode("utf-8")),
             "lines": len(lines),
             "note": note,
         })
-        print("  ✅ %-46s %8d 字节  %6d 行" % (group + "/" + rel, dest.stat().st_size, len(lines)))
+        print("  ✅ %-46s %8d 字节  %6d 行"
+              % (group + "/" + rel, len(norm.encode("utf-8")), len(lines)))
 
     if failed:
         print("\n❌ 以下源抓取失败，未落盘：")
@@ -182,7 +191,7 @@ def render_manifest_md(mf: dict) -> str:
         "",
         "## 文件明细",
         "",
-        "| 分组 | 文件 | 字节 | 非注释行 | sha256 前 12 位 | 用途 |",
+        "| 分组 | 文件 | 字节（LF 归一化） | 非注释行 | sha256 前 12 位 | 用途 |",
         "|---|---|---|---|---|---|",
     ]
     for s in mf["sources"]:

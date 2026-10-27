@@ -24,7 +24,7 @@ direct 仍由上游白名单瘦身而来。两者都只读 `upstream/`，**构�
   python skill/tests/verify_products.py          # 在仓根执行
   python skill/tests/verify_products.py --root . # 显式指定仓根
 
-断言清单（12 段，执行顺序）:
+断言清单（13 段，执行顺序）:
   1. 六份产物存在且非空
   2. 三格式条数一致（ads 三份互等 / direct 三份互等）
   3. 跨格式语义等价（归一化后逐条比对，不是只比条数）
@@ -91,21 +91,22 @@ PRODUCTS = {
     },
 }
 
-# 生成命令的固定参数（与 SKILL.md「完整生成」节一致）。
+# 生成命令的固定参数（与 skill/scripts/regen.sh 一致）。
 #
-# ⚠️ `--src` 的写法会**原样进产物表头**（SKILL.md 第 107 行），必须与既有文件
-#    逐字一致，否则「可复现」一段会把表头差异误报成内容差异。实测踩坑：
-#    ads 线表头是 `# source: build/ads`，direct 线是
-#    `# source: upstream/jinx-3.2.3` —— 两条命令的写法本就不同，不是笔误。
-#    ⚠️ 别为了「统一」给其中一条加 `./`：表头会跟着变，第 6 段立刻判负。
+# ⚠️ `--src` 的写法会**原样进产物表头**（除非给了 `--label`），所以这里刻意
+#    把 `--src` 从参数表里移出，单独管理：
+#      · direct：`--src upstream/jinx-3.2.3` 既是路径也是表头文案，直接用它；
+#      · ads   ：源是构建器的**临时**产物，路径每次不同，故必须配 `--label`
+#                把表头钉成固定文案，否则「可复现」会把路径差异误报成内容差异。
+#    ⚠️ 别为了「统一」给 direct 加 `./` 前缀：表头会跟着变，第 6 段立刻判负。
+SRC_OF = {'ads': None, 'direct': 'upstream/jinx-3.2.3'}   # ads 的 src 是临时目录
+LABEL_OF = {'ads': 'upstream/(A+B+C)'}                    # 写进 `# source:` 的固定文案
 REGEN = {
-    # ads 的输入是 build_ads.py 的产物（build/ads/ads-src.txt），不是上游源文件。
-    # 本表只描述「最后一步」；完整生成链见 regen.sh（先 build_ads.py 再本表）。
-    'ads': ['--src', 'build/ads',
-            '--fixed', 'ads-src.txt',
+    # ads 的输入是 build_ads.py 的产物（ads-src.txt），本表只描述「最后一步」；
+    # 完整生成链见 regen.sh（先 build_ads.py 再本表）。
+    'ads': ['--fixed', 'ads-src.txt',
             '--tag', 'ads', '--mode', 'suffix', '--extra', 'custom-ads.list'],
-    'direct': ['--src', 'upstream/jinx-3.2.3',
-               '--fixed', 'whitelist.txt', '--wild', 'whitelist_wildcard.txt',
+    'direct': ['--fixed', 'whitelist.txt', '--wild', 'whitelist_wildcard.txt',
                '--tag', 'direct', '--mode', 'exact',
                '--guard-against-fixed', 'blacklist.txt',
                '--guard-against-wild', 'blacklist_wildcard.txt',
@@ -376,8 +377,53 @@ def seg_doc_counts(root, rep, counts):
                       if m and int(m.group(1)) == real else
                       f'README 徽章 {fam}: 声明 {m.group(1) if m else "(缺)"} != 实际 {real}',
                       '徽章是门面读数，与实际不符会被读者当场看出')
+        # 5-d: 能力矩阵里的「构成描述」—— 这类文字最容易被改判据时漏掉。
+        # 实测：把「43 条精确 + 6 条后缀（含 5 条手工补充）」整体改错，旧闸门全绿。
+        surge_lines = parse_surge(root / PRODUCTS['direct']['surge'])
+        n_exact = sum(1 for e in surge_lines if e.upper().startswith('DOMAIN,'))
+        n_suffix = sum(1 for e in surge_lines if e.upper().startswith('DOMAIN-SUFFIX,'))
+        n_other = len(surge_lines) - n_exact - n_suffix
+        manual = len([l for l in (root / 'custom-direct.list').read_text(encoding='utf-8').splitlines()
+                      if l.strip() and not l.strip().startswith('#')])
+        m = re.search(r'\|\s*✅ 放行\s*\|\s*\*\*(\d+) 条\*\*\s*\|\s*'
+                      r'(\d+) 条精确 \+ (\d+) 条后缀（含 (\d+) 条手工补充）\s*\|', text)
+        if not m:
+            rep.judge(False, 'doc', 'README 能力矩阵：放行构成描述未命中（版式变了？）',
+                      '这行写的是 direct 的构成，判据锚在它上面')
+        else:
+            got = tuple(int(x) for x in m.groups())
+            want = (counts['direct']['mihomo'], n_exact, n_suffix, manual)
+            rep.judge(got == want and n_other == 0, 'doc',
+                      f'README 能力矩阵 放行构成: {got} == {want}'
+                      if got == want and n_other == 0 else
+                      f'README 能力矩阵 放行构成: 声明 {got} != 实际 {want}'
+                      + (f'（另有 {n_other} 条非 DOMAIN/DOMAIN-SUFFIX 条目）' if n_other else ''),
+                      '条数对了不代表构成对了 —— 精确/后缀/手补三项都要对上')
     else:
         rep.judge(False, 'doc', 'README.md 缺失', '对外交付必须写 README')
+
+    # 5-e: SKILL 的预期读数。
+    # ⚠️ 旧版只判「正则可解析」、不比数值 —— 实测把 9534/49 改成 9999/1，闸门仍 70/0 全绿。
+    #    这是典型的「断言与被检对象不同构」：它证明版式没变，不证明数字是对的。
+    sk = root / 'skill' / 'SKILL.md'
+    if sk.is_file():
+        stext = sk.read_text(encoding='utf-8')
+        for pat, label in (
+                (r'预期读数：`ads (\d+)` / `direct (\d+)`', 'SKILL 预期读数行'),
+                (r'\|\s*现读数\s*\|\s*`ads (\d+)` / `direct (\d+)`\s*\|', 'SKILL 现读数行')):
+            mm = re.search(pat, stext)
+            if not mm:
+                rep.judge(False, 'doc', f'{label}: 锚点未命中（版式变了？）',
+                          'SKILL 的读数是人肉参照，锚点失效等于这行没人看')
+                continue
+            got = (int(mm.group(1)), int(mm.group(2)))
+            want = (counts['ads']['mihomo'], counts['direct']['mihomo'])
+            rep.judge(got == want, 'doc',
+                      f'{label}: {got} == {want}' if got == want else
+                      f'{label}: 声明 {got} != 实际 {want}',
+                      '§SKILL 里的数字是照着产物写的，产物变了要同步改')
+    else:
+        rep.judge(False, 'doc', 'skill/SKILL.md 缺失', '面向 agent 的施工图必须存在')
 
     # 5-c: DetailsReadme 表格里的条数，以及「白名单怎么来的」推导式
     if details.is_file():
@@ -530,8 +576,8 @@ def seg_upstream_doc(root, rep):
     version, date = ver['version'], ver['lastUpdate'][:10]
 
     targets = [
-        ('README.md', 'README Source 徽章',
-         r'badge/Source-Jinx%20([0-9][0-9.]*)', version),
+        ('README.md', 'README 冻结徽章',
+         r'badge/Frozen-Jinx%20([0-9][0-9.]*)', version),
         ('README.md', 'README 上游快照行',
          r'\| 📌 上游快照 \| 冻结于 `([0-9][0-9.]*)` · `(\d{4}-\d{2}-\d{2})` \|',
          (version, date)),
@@ -559,13 +605,8 @@ def seg_upstream_doc(root, rep):
                   f'{label}: 声明 {got} != 冻结快照 {want}',
                   '文档是上游版本的门面读数，写错就是让读者以为在用别的版本')
 
-    sk = root / 'skill' / 'SKILL.md'
-    if sk.is_file():
-        m = re.search(r'预期读数：`ads (\d+)` / `direct (\d+)`',
-                      sk.read_text(encoding='utf-8'))
-        rep.judge(bool(m), 'ver',
-                  'SKILL 预期读数行可解析' if m else 'SKILL 预期读数行未命中（版式变了？）',
-                  'SKILL.md 的预期读数是自测参照，锚点失效则后续判断失真')
+    # SKILL 的读数数值比对放在第 5 段（5-e）—— 这里原本只判「正则可解析」，
+    # 与真实的数值校验重复且更弱，已移除，避免两条同名判据让人误读成双保险。
 
 
 def seg_reproducible(root, rep, counts=None):
@@ -586,26 +627,37 @@ def seg_reproducible(root, rep, counts=None):
         return 'skip'
 
     import tempfile
-    # ads 的输入是 build_ads.py 的产物，不是上游源文件 —— 先跑构建器。
-    # 这也是「产物 == 生成链重跑」里 ads 那半段的完整含义：构建器 + 转换器两步。
     build = root / 'skill' / 'scripts' / 'build_ads.py'
-    build_ok = True
-    if build.is_file():
-        proc = subprocess.run([sys.executable, str(build)], cwd=str(root),
-                              capture_output=True, text=True)
-        if proc.returncode != 0:
-            build_ok = False
-            rep.judge(False, 'repro', 'build_ads.py 构建失败（exit %d）' % proc.returncode,
-                      (proc.stderr or proc.stdout or '')[-400:])
-    else:
-        build_ok = False
-        rep.judge(False, 'repro', '缺 skill/scripts/build_ads.py', 'ads 生成链的第一步')
 
     with tempfile.TemporaryDirectory() as tmp:
+        # ads 的输入是 build_ads.py 的产物 —— 先跑构建器，**输出到临时目录**。
+        # 这样校验本身不写仓库（旧版会覆盖 build/ads/ads-src.txt，属于"只读断言有副作用"）。
+        # 这也是「产物 == 生成链重跑」里 ads 那半段的完整含义：构建器 + 转换器两步。
+        build_ok = True
+        ads_src_dir = Path(tmp) / 'ads'
+        if build.is_file():
+            proc = subprocess.run(
+                [sys.executable, str(build), '--out', str(ads_src_dir / 'ads-src.txt')],
+                cwd=str(root), capture_output=True, text=True)
+            if proc.returncode != 0:
+                build_ok = False
+                rep.judge(False, 'repro', 'build_ads.py 构建失败（exit %d）' % proc.returncode,
+                          (proc.stderr or proc.stdout or '')[-400:])
+        else:
+            build_ok = False
+            rep.judge(False, 'repro', '缺 skill/scripts/build_ads.py', 'ads 生成链的第一步')
+
         for fam, extra in REGEN.items():
             if fam == 'ads' and not build_ok:
                 continue
-            cmd = [sys.executable, str(script), '--out', tmp, '--naming', 'repo'] + extra
+            if fam == 'ads':
+                src = str(ads_src_dir)
+            else:
+                src = SRC_OF[fam]
+            cmd = ([sys.executable, str(script), '--out', tmp, '--naming', 'repo',
+                    '--src', src] + extra)
+            if fam in LABEL_OF:
+                cmd += ['--label', LABEL_OF[fam]]
             proc = subprocess.run(cmd, cwd=str(root), capture_output=True, text=True)
             if proc.returncode != 0:
                 rep.judge(False, 'repro', f'{fam}: 重跑生成失败（exit {proc.returncode}）',

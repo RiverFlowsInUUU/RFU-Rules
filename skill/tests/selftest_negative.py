@@ -240,9 +240,9 @@ def _(w):
     t = p.read_text(encoding='utf-8')
     ver = json.loads((w / 'upstream' / 'jinx-3.2.3' / 'version.json').read_text(
         encoding='utf-8'))['version']
-    pat = r'badge/Source-Jinx%20' + re.escape(ver)
-    assert re.search(pat, t), '负样本失效：README Source 徽章里没有当前上游版本号'
-    p.write_text(re.sub(pat, 'badge/Source-Jinx%200.0.0', t, count=1),
+    pat = r'badge/Frozen-Jinx%20' + re.escape(ver)
+    assert re.search(pat, t), '负样本失效：README 冻结徽章里没有当前上游版本号'
+    p.write_text(re.sub(pat, 'badge/Frozen-Jinx%200.0.0', t, count=1),
                  encoding='utf-8')
 
 
@@ -321,34 +321,51 @@ def main():
             return 2
     print(f'负样本数: {len(CASES)}\n')
 
+    # 每条样本各建一个临时副本并跑一次完整闸门 —— 互不依赖，故并发执行。
+    # 串行时 14 条要 70s 以上（每条 4-5s，主要是 python 启动 + 三支路重建），
+    # CI 上更慢；并发 4 路后约 1/3。
+    def run_one(case):
+        label, expect, sabotage = case
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                work = Path(tmp) / 'repo'
+                # upstream/ 必须复制：第 5b / 6b 段要读它断言「快照完整且未被手改」。
+                # 排除它会让这两段对所有样本一律判负，于是每条都"抓到"，自测失去区分力。
+                # build/ 是中间目录，不进副本 —— 第 6 段会自己重建到临时目录。
+                shutil.copytree(ROOT, work,
+                                ignore=shutil.ignore_patterns('.git', '__pycache__',
+                                                              '_regen', 'build'))
+                sabotage(work)
+                proc = subprocess.run(
+                    [sys.executable, str(TARGET), '--root', str(work)],
+                    capture_output=True, text=True, encoding='utf-8', errors='replace')
+        except Exception as e:                                   # noqa: BLE001
+            return label, expect, 'raised', str(e)[:300]
+        return label, expect, proc.returncode, (proc.stdout or '') + (proc.stderr or '')
+
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=min(4, len(CASES))) as pool:
+        results = list(pool.map(run_one, CASES))
+
     caught = missed = 0
-    for label, expect, sabotage in CASES:
-        with tempfile.TemporaryDirectory() as tmp:
-            work = Path(tmp) / 'repo'
-            # upstream/ 也要复制：第 5b / 6b 段要读它断言「冻结快照完整且未被手改」。
-            # 若在这里排除它，两道新断言会因「缺源文件」对所有负样本一律判负，
-            # 于是每条负样本都能“抓到”，自测就不再能区分真假 —— 等于自测空转。
-            shutil.copytree(ROOT, work,
-                            ignore=shutil.ignore_patterns('.git',
-                                                          '__pycache__', '_regen'))
-            sabotage(work)
-            proc = subprocess.run(
-                [sys.executable, str(TARGET), '--root', str(work)],
-                capture_output=True, text=True, encoding='utf-8', errors='replace')
-            out = proc.stdout or ''
-            ok = proc.returncode == 1 and expect in out
-            if ok:
-                caught += 1
-                hits = [l.strip() for l in out.splitlines() if l.strip().startswith('❌')]
-                print(f'  ✅ {label}')
-                print(f'      exit=1，命中「{expect}」｜{hits[0] if hits else ""}')
-            else:
-                missed += 1
-                print(f'  ❌ {label}')
-                print(f'      **漏报**：预期 exit=1 且命中「{expect}」，实际 exit={proc.returncode}')
-                tail = (out or proc.stderr or '').strip().splitlines()[-6:]
-                for l in tail:
-                    print(f'      | {l}')
+    for label, expect, code, out in results:
+        if code == 'raised':
+            missed += 1
+            print(f'  ❌ {label}')
+            print(f'      **负样本自身失效**：{out}')
+            continue
+        ok = code == 1 and expect in out
+        if ok:
+            caught += 1
+            hits = [l.strip() for l in out.splitlines() if l.strip().startswith('❌')]
+            print(f'  ✅ {label}')
+            print(f'      exit=1，命中「{expect}」｜{hits[0] if hits else ""}')
+        else:
+            missed += 1
+            print(f'  ❌ {label}')
+            print(f'      **漏报**：预期 exit=1 且命中「{expect}」，实际 exit={code}')
+            for l in (out or '').strip().splitlines()[-6:]:
+                print(f'      | {l}')
 
     print(f'\n负样本结果: {caught} 抓到, {missed} 漏报')
     if missed:

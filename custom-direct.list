@@ -1,6 +1,6 @@
-# custom-direct.list —— 手工追加的直连域名（非上游 Jinx 来源）
+# custom-direct.list —— 手工追加的直连域名（非上游六源来源）
 #
-# 用途：上游 Jinx 未放行、但实测为「功能域」（必须直连、绝不能拦）的域名。
+# 用途：上游白名单未放行、但实测为「功能域」（必须直连、绝不能拦）的域名。
 # 合并方式：由 skill/scripts/convert_ruleset.py 的 --extra-white 参数读入，
 #           追加在 guard 过滤之后 —— 不参与碰撞裁剪，永远存活。
 #

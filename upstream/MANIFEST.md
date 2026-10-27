@@ -17,13 +17,13 @@ Jinx 上游自 `3.2.4` 起改为加密发布（`new-rules/*.enc`，需接收方 
 
 | 项 | 值 |
 |---|---|
-| 冻结时间（UTC） | `2026-10-27T03:54:41+00:00` |
+| 冻结时间（UTC） | `2026-10-27T04:22:16+00:00` |
 | Jinx 明文通道锚点 | `VME98/jinx-rules@c85751d`（对应版本见 `jinx-3.2.3/version.json`） |
 | 源文件数 | 12 |
 
 ## 文件明细
 
-| 分组 | 文件 | 字节 | 非注释行 | sha256 前 12 位 | 用途 |
+| 分组 | 文件 | 字节（LF 归一化） | 非注释行 | sha256 前 12 位 | 用途 |
 |---|---|---|---|---|---|
 | jinx-3.2.3 | `blacklist.txt` | 71283 | 3726 | `adcf99b214dd` | 上游黑名单（后缀语义） |
 | jinx-3.2.3 | `blacklist_wildcard.txt` | 4582 | 264 | `63d63c644e56` | 上游黑名单通配 |
@@ -32,7 +32,7 @@ Jinx 上游自 `3.2.4` 起改为加密发布（`new-rules/*.enc`，需接收方 
 | jinx-3.2.3 | `version.json` | 898 | 30 | `d9c20f057a4c` | 上游版本自述 |
 | 217heidai | `adblocksurgelite.list` | 162652 | 8480 | `54b46434e930` | 16 源聚合后 ∩ china.txt 的 lite 档（DOMAIN-SET 格式） |
 | 217heidai | `china.txt` | 207809 | 12143 | `23a1d548beb9` | 中国域名清单（判定「中国生态」的基准） |
-| cn | `AdGuard_Chinese_filter.txt` | 754584 | 21095 | `ee6ab97f4205` | AdGuard 官方中文过滤器 |
+| cn | `AdGuard_Chinese_filter.txt` | 732689 | 21095 | `ee6ab97f4205` | AdGuard 官方中文过滤器 |
 | cn | `AWAvenue_Ads_Rule.txt` | 23470 | 984 | `fdf930d67659` | 秋风广告规则 |
 | cn | `jiekouAD.txt` | 129121 | 5375 | `f5ff18cab4bd` | 接口广告源（灰产长尾多，靠准入规则滤） |
 | cn | `CJX_Annoyance_List.txt` | 57229 | 1840 | `f5afcf694eb6` | CJX 中文骚扰+广告 |

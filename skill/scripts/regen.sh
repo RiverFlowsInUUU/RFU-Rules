@@ -37,9 +37,12 @@ echo "== 2/4 ads 域名集（三支路合成）=="
 
 echo
 echo "== 3/4 ads 产物（→ mihomo / Surge / sing-box）=="
+# --label 决定产物表头 `# source:` 的文案。别让内部中间目录（build/ads）
+# 出现在用户会下载的文件里 —— 那对读者毫无意义。
 "$PY" "$SK" --src build/ads --out . \
     --fixed ads-src.txt \
     --tag ads --mode suffix --naming repo \
+    --label "upstream/(A+B+C)" \
     --extra custom-ads.list
 
 echo

@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
 """把第三方域名规则源转换为 mihomo / Surge / sing-box 可用格式。
 
-用法:
-  python convert_ruleset.py --src ./jinx-rules --out ./converted \\
-      --fixed blacklist.txt --wild blacklist_wildcard.txt --tag ads
+用法（本仓 RFU-Rules 的实况；换别的源只改 --src 即可）:
+  # 拦截集：源已是纯域名列表（build_ads.py 的产物）
+  python convert_ruleset.py --src build/ads --out . --naming repo \
+      --fixed ads-src.txt --tag ads --mode suffix \
+      --label "upstream/(A+B+C)" --extra custom-ads.list
 
-  # 白名单瘦身 -- 只保留真正会被黑名单误杀的条目(guard list)
-  python convert_ruleset.py --src ./jinx-rules --out ./converted \\
-      --fixed whitelist.txt --wild whitelist_wildcard.txt --tag direct \\
-      --guard-against-fixed blacklist.txt --guard-against-wild blacklist_wildcard.txt
+  # 放行集：上游白名单瘦身（guard = 只保留真正会被黑名单误杀的条目）
+  python convert_ruleset.py --src upstream/jinx-3.2.3 --out . --naming repo \
+      --fixed whitelist.txt --wild whitelist_wildcard.txt --tag direct --mode exact \
+      --guard-against-fixed blacklist.txt --guard-against-wild blacklist_wildcard.txt \
+      --extra-white custom-direct.list
 
   # 语义开关
   --mode suffix (默认) 普通条目 => DOMAIN-SUFFIX, 复刻 Jinx 等 DNS 过滤器的"域名+全部子域"语义
@@ -23,10 +26,14 @@
       直连域, 追加在 guard 之后, 强制 DOMAIN-SUFFIX, 不参与任何裁剪。
       上游没放行、但实测必须直连的功能域写在这里(写 *.x.com 即放行 x.com 及全部子域)。
 
+  # 表头 `# source:` 的文案（默认取 --src 的值）
+  # 源目录是临时/中间路径时（如 build/ads）用它，别让内部路径写进用户会下载的产物。
+  --label "upstream/(A+B+C)"
+
   # 输出命名
   --naming classic (默认)  mihomo-<tag>-classical.yaml / surge-<tag>-ruleset.list
   --naming repo             mihomo-<tag>.yaml / surge-<tag>.list
-                            (与 Jinx 等已托管仓库文件名一致, 可直接覆盖上传)
+                            (本仓用这个：文件名即订阅地址，稳定可引用)
 
 产出:
   mihomo-<tag>-classical.yaml   behavior: classical, format: yaml, 100% 保真
@@ -195,6 +202,9 @@ def build_blacklist_matcher(fixed_paths, wild_paths):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--src', required=True, help='源目录或文件路径')
+    ap.add_argument('--label', default=None,
+                    help='写进产物表头 `# source:` 的文案（默认取 --src 的值）。'
+                         '源是临时/中间目录时用它，避免内部路径出现在用户下载的文件里')
     ap.add_argument('--out', required=True, help='输出目录')
     ap.add_argument('--fixed', help='精确域名文件名(在 src 目录下)')
     ap.add_argument('--wild', help='通配域名文件名(在 src 目录下)')
@@ -330,7 +340,7 @@ def main():
 
     header = ('# auto-converted by adblock-ruleset-port\n'
               '# source: %s\n# mode: %s\n# entries: %d\n'
-              % (args.src, args.mode, len(mihomo_classical)))
+              % (args.label or args.src, args.mode, len(mihomo_classical)))
     if extra_names:
         header += '# extra: %s\n' % ', '.join(extra_names)
     if extra_white_names:

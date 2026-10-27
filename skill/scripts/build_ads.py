@@ -30,7 +30,12 @@ lite 是 16 源浓缩的另一条路线，Jinx 是第三条。三者互补，并
 6. 功能域排除：含 push / passport / login / uaa / doh / im / chat / subscription 等
    功能词元、且无广告语义、无 ad 词根、无平台痕迹者剔除。
    ⚠️ api / sdk / gateway 不在词表 —— 几乎每个广告 SDK 端点都带，不具备区分力。
-7. 灰产靠结构不靠语义：归属域下孤立 1 条 + 元音比例低 + 含数字 = 随机域名，剔除。
+7. 灰产靠结构不靠语义。**注意作用范围——三个支路不等权：**
+   A 支路（lite）：剔除「归属域下孤立 1 条 + 元音比例低 + 含数字」的随机域名。
+   B 支路（5 个中文源）：准入 = 成簇(≥2) **或** 含语义，两者皆无者出局。
+   C 支路（Jinx 3.2.3）：**不做任何灰产过滤** —— 它本身是人工维护的成品清单，
+     再筛一遍会误删真广告，收益不抵风险。
+   实测差异：产物里 93 条形态随机的域名中，40 条来自 C 支路。这是有意的。
 
 断言（失败即非零退出，CI 同源）
 ================================
@@ -133,6 +138,8 @@ MUST_CONTAIN = [
 ]
 # 覆盖率断言基线必须独立于支路来源，否则是同义反复。
 # 曾用 Jinx 当基线而 Jinx 本身是 C 支路 → 91.5% 等于自证。
+# ⚠️ 这两个护栏是「防抖」用的，加源/改判据后要跟着调 —— 命令行可覆盖，
+#    但正式产出请把新值写回这里，别只靠临时参数。
 COVERAGE_FLOOR = 0.85
 SIZE_RANGE = (5000, 15000)
 
@@ -316,6 +323,12 @@ def main() -> int:
     ap.add_argument("--out", default=str(OUT_DIR / "ads-src.txt"))
     ap.add_argument("--audit", default=str(OUT_DIR / "ads-audit.txt"))
     ap.add_argument("--dry-run", action="store_true", help="只输出审计，不落盘")
+    ap.add_argument("--coverage-floor", type=float, default=COVERAGE_FLOOR,
+                    help="独立基线覆盖率下限（默认 %(default)s）")
+    ap.add_argument("--size-min", type=int, default=SIZE_RANGE[0],
+                    help="产物规模下限（默认 %(default)s）")
+    ap.add_argument("--size-max", type=int, default=SIZE_RANGE[1],
+                    help="产物规模上限（默认 %(default)s）")
     args = ap.parse_args()
 
     required = [LITE, CHINA, JINX_BLK, JINX_BLK_WILD, COVERAGE_BASELINE] + \
@@ -417,11 +430,12 @@ def main() -> int:
         errs.append("产物缺失已知必需域：%s" % _missing)
     if not direct:
         errs.append("direct 放行清单为空，顺序保护无从谈起")
-    if coverage is not None and coverage < COVERAGE_FLOOR:
+    size_range = (args.size_min, args.size_max)
+    if coverage is not None and coverage < args.coverage_floor:
         errs.append("独立基线覆盖率 %.1f%% 低于护栏 %.0f%%"
-                    % (coverage * 100, COVERAGE_FLOOR * 100))
-    if not (SIZE_RANGE[0] <= len(final) <= SIZE_RANGE[1]):
-        errs.append("产物规模 %d 超出护栏 %s" % (len(final), SIZE_RANGE))
+                    % (coverage * 100, args.coverage_floor * 100))
+    if not (size_range[0] <= len(final) <= size_range[1]):
+        errs.append("产物规模 %d 超出护栏 %s" % (len(final), size_range))
     if len(final) != len(fset):
         errs.append("产物存在重复")
 
@@ -456,7 +470,7 @@ def main() -> int:
         "  【断言基线·独立】AWAvenue %d 条 → 覆盖 %d 条 = %s（护栏 %.0f%%）"
         % (len(awa), awa_hit,
            ("%.1f%%" % (coverage * 100)) if coverage is not None else "未测",
-           COVERAGE_FLOOR * 100),
+           args.coverage_floor * 100),
         "  【参考】Jinx·中国生态 %d 条 → 覆盖 %d 条 = %s"
         % (len(j_cn), j_hit,
            ("%.1f%%" % (cov_jinx * 100)) if cov_jinx is not None else "未测"),

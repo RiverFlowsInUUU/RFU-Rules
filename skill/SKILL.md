@@ -1,6 +1,6 @@
 ---
 name: rfu-rules-maintain
-description: 维护 RFU-Rules 这份「中文广告 / 统计 / 隐私 / PCDN 域名规则集」—— 冻结上游快照、三支路合成、三平台产物生成、12 段一致性断言与负样本自测，以及加新源 / 加新平台 / 改文件名三类结构性改动的一次性全套清单。含跨平台规则语义映射（mihomo / Surge / Egern / sing-box）、白名单瘦身与顺序保护、Surge pre-matching 与 extended-matching 的硬约束、README 交付规范。触发词：RFU-Rules、规则集维护、加规则源、三支路合成、freeze_upstream、build_ads、convert_ruleset、DOMAIN-SUFFIX、rule-provider、RULE-SET、去广告规则仓库、白名单瘦身、快照冻结。
+description: 维护 RFU-Rules 这份「中文广告 / 统计 / 隐私 / PCDN 域名规则集」—— 冻结上游快照、三支路合成、三平台产物生成、13 段一致性断言与负样本自测，以及加新源 / 加新平台 / 改文件名三类结构性改动的一次性全套清单。含跨平台规则语义映射（mihomo / Surge / Egern / sing-box）、白名单瘦身与顺序保护、Surge pre-matching 与 extended-matching 的硬约束、README 交付规范。触发词：RFU-Rules、规则集维护、加规则源、三支路合成、freeze_upstream、build_ads、convert_ruleset、DOMAIN-SUFFIX、rule-provider、RULE-SET、去广告规则仓库、白名单瘦身、快照冻结。
 agent_created: true
 ---
 
@@ -34,7 +34,7 @@ agent_created: true
 6. **不给拦截行加 `pre-matching`。** 它会把 REJECT 抽到所有规则之前评估，`direct` 那行永远轮不到。
 7. **改完必跑两层闸门**，缺一不可：`verify_products.py` 判对错，`selftest_negative.py` 证明闸门自己还能抓错。
 
-## 构建链（三条命令，顺序不可交换）
+## 构建链（三步，顺序不可交换）
 
 ```bash
 # ① 冻结上游（唯一联网步骤；已有快照时可用 --check 只校验）
@@ -89,7 +89,7 @@ bash skill/scripts/regen.sh --build  # 只重建，不跑闸门
 | 4 | 只拦域名，不拦 IP | IPv4 / CIDR 在提取阶段剔除 |
 | 5 | 静态资源硬排除 | label 以 `static` / `download` / `status` / `update` 开头者剔除，**不受成簇豁免**。实证：`s.bdstatic.com`、`static-s.iqiyi.com` 被拦会让页面挂图裂 |
 | 6 | 功能域排除要留豁免 | 含 `push`/`passport`/`login`/`uaa`/`doh`/`im`/`subscription` 等词元且无广告语义者剔除；但 `ad` 词根（`advertising-api.amazon.com`）与平台痕迹（`unity3d`/`snssdk`）必须豁免 |
-| 7 | 灰产靠结构，不靠语义 | 形态是「随机域名 + 归属域下孤立 1 条」。准入 =「成簇(≥2) **或** 含语义」二者之一；真平台天然满足其一，灰产两者都不满足 |
+| 7 | 灰产靠结构，不靠语义 —— **但三支路不等权** | A 支路：剔「孤立 1 条 + 元音比例低 + 含数字」的随机域；B 支路：准入 =「成簇(≥2) **或** 含语义」；**C 支路不做过滤**（它是人工维护的成品清单，再筛会误删真广告）。实测：产物里 93 条形态随机域中 40 条来自 C 支路，这是有意的 |
 
 ⚠️ **语义判定必须词元级，不许子串。** 曾用裸 `"ad"` / `"stat"` / `"log"` 做子串匹配，把 `static`、`bdstatic`、`download`、`prologue` 全命中，误收 276 条静态资源域。现在按 label 切词元精确比对。
 
@@ -104,6 +104,21 @@ bash skill/scripts/regen.sh --build  # 只重建，不跑闸门
 5. **加进 `freeze_upstream.py` 的 `SOURCES`**，跑一次重新冻结 + `regen.sh`，看漏斗数字与覆盖率断言。
 
 ⚠️ **别从 `full` 反筛。** 「从 24 万条里筛出中文广告域」没有权威判据：「中文广告域」不是字符属性，广告与功能同族（`cupid.iqiyi.com` 广告 / `c.uaa.iqiyi.com` 登录），粒度也不可从规则本身推。要么取源原件，要么加源。
+
+## 加一个新平台（客户端）
+
+新平台 ≠ 新源。加一端的产物要动四处，漏一处就变成「只支持一半」：
+
+| # | 位置 | 改什么 |
+|:-:|:--|:--|
+| 1 | `convert_ruleset.py` | 照现有三个写出函数（`mihomo_yaml` / `surge_ruleset` / `singbox_json`）的形状加一个，并挂进 `outputs` 列表 |
+| 2 | `verify_products.py` | `PRODUCTS` 加文件名；加 `parse_xxx`；`seg_cross_format` 的类型映射（`SB_FIELD` / `SURGE_ALIAS` 之类）补齐 |
+| 3 | 面向外部的五处清单 | README 徽章行 / 订阅表行 / 接入节 `<summary>` / DetailsReadme 订阅表行 / `upload_to_github.py` 的 `--description` 默认值。第 10 段逐一检查，缺一处就红 |
+| 4 | 文档示例 | README 接入示例 + DetailsReadme 转换原理表加一列，否则读者不知道怎么配 |
+
+⚠️ 平台名要用**固定写法**（`sing-box` 而不是 `Singbox`）—— 第 10 段按名字匹配，写歪了等于没加。
+⚠️ 若新平台复用已有格式（Egern 复用 Surge），**不要造产物**，把它加进 `PLATFORM_LABEL` 的别名表即可。
+⚠️ 加完回头跑 `selftest_negative.py`：两条「平台清单缺一端」样本锚在表头与简介默认值上，版式一改就会抛「负样本失效」—— 那是提醒，不是漏报。
 
 ## 匹配语义与通配映射（接新源时用）
 
@@ -222,11 +237,11 @@ RULE-SET,https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/surge-
 ## 断言口径
 
 ```bash
-python skill/tests/verify_products.py      # 12 段，与 CI 同源
+python skill/tests/verify_products.py      # 13 段，与 CI 同源
 python skill/tests/selftest_negative.py    # 负样本：证明闸门本身能抓错
 ```
 
-12 段：产物存在 · 三格式条数一致 · **跨格式逐条语义等价** · 表头自述 · 文档条数 · **文档上游版本号** · **产物 == 生成链重跑** · **冻结快照自述 + sha256 完整性** · `custom-*.list` 落盘 · 文案规范 · 行尾与 BOM · 平台清单齐备 · 表格 emoji 宽度。
+13 段：产物存在 · 三格式条数一致 · **跨格式逐条语义等价** · 表头自述 · 文档条数 · **文档上游版本号** · **产物 == 生成链重跑** · **冻结快照自述 + sha256 完整性** · `custom-*.list` 落盘 · 文案规范 · 行尾与 BOM · 平台清单齐备 · 表格 emoji 宽度。
 
 退出码四态：`0` 过 / `1` 判负 / `2` 环境不达标 / `3` SKIP。**SKIP 走独立码，不借 0 蒙混** —— 「未验证 ≠ 绿」。
 

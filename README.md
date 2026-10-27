@@ -6,7 +6,7 @@
 
 三支路合成 · 冻结上游 · 离线可复现
 
-[![Source](https://img.shields.io/badge/Source-Jinx%203.2.3-8250df?style=flat-square)](https://github.com/VME98/jinx-rules)
+[![Frozen](https://img.shields.io/badge/Frozen-Jinx%203.2.3-8250df?style=flat-square)](https://github.com/VME98/jinx-rules)
 [![License](https://img.shields.io/badge/License-%E6%9C%AA%E5%A3%B0%E6%98%8E-critical?style=flat-square)](#-来源与许可)
 
 [![mihomo](https://img.shields.io/badge/mihomo-OpenClash-1f6feb?style=flat-square)](#-接入)
@@ -19,6 +19,8 @@
 [![White](https://img.shields.io/badge/%E6%94%BE%E8%A1%8C-49%20%E6%9D%A1-2da44e?style=flat-square)](#-订阅)
 
 </div>
+
+> 🧬 **拦什么、从哪来**：只拦四类域名 —— 广告、统计、隐私采集、PCDN；不拦赌博色情灰产，也不拦 IP。规则由三支路合成：217heidai lite · 5 个中文源 · 冻结的 Jinx 3.2.3 明文基线，取舍详见[详情第 1 章](DetailsReadme/DetailsReadme.md#-1-三个支路与取值)。
 
 > 🤖 **AI agent 请从这里开始** → [`skill/SKILL.md`](skill/SKILL.md)：构建链、断言口径，和七条不要越的线。
 
