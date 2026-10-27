@@ -41,7 +41,16 @@
 #                 iosapps.itunes.apple.com；且 guard 会因它们不与黑名单碰撞而裁掉，
 #                 其余 itunes.apple.com 子域落进兜底走代理。本条目补的正是子域面。
 #
+# *.aspect-upush.umeng.com  友盟推送（U-Push）长连接通道。2026-10-27 追加。
+#                 现象：拦截集里有 umeng.com（DOMAIN-SUFFIX，源自 Jinx 3.2.3 明文黑名单），
+#                 它一并罩住了 aspect-upush.umeng.com —— 该域正是友盟推送的建连入口，
+#                 被拦的表现是「App 收不到推送」，而且日志里看不出是规则导致。
+#                 处理：不删 umeng.com 这个上层域（删了等于放过整个友盟广告体系），
+#                 改用顺序保护 —— 本条目更具体，direct 排在拦截集之前，先命中 DIRECT。
+#                 📌 与 tanx.com / getui.net 同一类处理，勿改成从拦截集里抠。
+#
 *.tange365.com
 *.wechatos.net
 *.za.group
 *.itunes.apple.com
+*.aspect-upush.umeng.com

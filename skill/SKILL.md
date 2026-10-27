@@ -1,267 +1,152 @@
 ---
-name: adblock-ruleset-port
-description: 把第三方广告/域名规则源（Jinx、AdGuard、anti-AD、GOODBYEADS 等）转换并移植到 mihomo(OpenClash) / Surge / QuantumultX，含通配语义映射、覆盖度实测、白名单瘦身(guard list)、引用配置写法与规则顺序陷阱、规则仓库托管与 README 交付规范。触发词：规则集移植、黑名单转 clash、广告规则转 Surge、Jinx 规则、DOMAIN-WILDCARD、rule-provider behavior、去广告规则引用、AWAvenue、白名单瘦身、规则仓库 readme。
+name: rfu-rules-maintain
+description: 维护 RFU-Rules 这份「中文广告 / 统计 / 隐私 / PCDN 域名规则集」—— 冻结上游快照、三支路合成、三平台产物生成、12 段一致性断言与负样本自测，以及加新源 / 加新平台 / 改文件名三类结构性改动的一次性全套清单。含跨平台规则语义映射（mihomo / Surge / Egern / sing-box）、白名单瘦身与顺序保护、Surge pre-matching 与 extended-matching 的硬约束、README 交付规范。触发词：RFU-Rules、规则集维护、加规则源、三支路合成、freeze_upstream、build_ads、convert_ruleset、DOMAIN-SUFFIX、rule-provider、RULE-SET、去广告规则仓库、白名单瘦身、快照冻结。
 agent_created: true
 ---
 
-# 广告 / 域名规则集跨平台移植
+# RFU-Rules 维护手册
 
 ## 适用
 
-把一个平台的域名黑/白名单，转换成另一个平台能吃的格式并接入。
+本仓交付一份**中文广告 / 统计 / 隐私采集 / PCDN 域名规则集**，同时输出 mihomo(OpenClash) / Surge / Egern / sing-box 四端格式。本文件是它的施工图：怎么重跑、怎么加源、怎么改结构、哪些线不能越。
 
-典型场景：某 App 的广告只有 Jinx（iOS 系统级 DNS 拦截）拦得住，AWAvenue-Ads 拦不住 → 把 Jinx 的黑名单补进 mihomo / Surge / sing-box。
+## 本仓是什么（2026-10-27 起的身份）
+
+| 项 | 值 |
+|---|---|
+| 仓库 | `RiverFlowsInUUU/RFU-Rules`（原名 `Jinx`） |
+| 性质 | **合成规则集** —— 三支路合并后裁剪 |
+| 上游 | 六个源，全部冻结在 `upstream/`，构建不联网 |
+| 产物 | 六份：三平台 × 拦截(`ads`) / 放行(`direct`) |
+| 现读数 | `ads 9534` / `direct 49` |
+
+⚠️ **它不再是「上游的格式转换镜像」。** 2026-10-27 之前它只做格式转换、承诺「规则一条不增不减」；现在 `ads` 是三支路合成，与任何单一上游都不等长。这条承诺只对 `direct` 还成立。**改任何东西之前先分清你动的是哪一半。**
+
+⚠️ **上游已冻结，不要再去看 `VME98/jinx-rules`。** 它自 `3.2.4` 起只发加密包（`new-rules/*.enc`，需接收方 P-256 私钥），明文 `rules/` 停在 `3.2.3`。本仓把那份明文钉成 `upstream/jinx-3.2.3/`，**不跟随、不解密、不轮询**。明文通道若哪天恢复，也按「新增一个源」处理，不是恢复跟随之。
 
 ## 铁律
 
-1. **先量化再动手**：不要假设"规则没生效"，先做**覆盖度实测**（把源列表与现用列表对账，量出漏拦面）。实测中 AWAvenue-Ads 只覆盖 Jinx 黑名单的 22.5%——问题是"域名不全"，不是"规则没生效"。这两者的修法完全不同。
-2. **先测匹配语义，再动手转换**（最易错、代价最大，见下节）。黑名单一般按"域名 + 全部子域"拦截，白名单一般只做精确放行。**默认假设"普通条目 = 精确匹配"会导致大面积漏拦。**
-3. **通配语义不可想当然**：三个平台的 `*` 含义不同，直接复制文件必然出错（见下表）。
-4. **规则顺序是生死线**：REJECT 规则集必须排在 `DIRECT` / `GEOSITE,cn,DIRECT` **之前**，否则永远轮不到。
-5. **别用高性能格式装通配**：`behavior: domain` 和 Surge `DOMAIN-SET` 都装不下中缀星号，且普通条目的子域语义有歧义。要 100% 保真只能用 `classical` / `RULE-SET`。
-6. 改设备配置走各自 SOP（OpenClash 见 `openclash-config-change` skill；Surge 见 `surge-profile-optimize` skill），先只读诊断、备份、校验、用户确认。
-7. **白名单要瘦身再上**，别整份前插（见"白名单瘦身"节）。托管成公开仓库时必须写 README（见"对外交付"节）并保留上游来源声明。
+1. **先量化，再动手。** 判断「某 App 广告漏拦」不要靠试错：先把该域拿去比对三支路，看它是「源里没有」还是「被准入规则筛掉」—— 这两者的修法完全不同（前者加源，后者改判据）。
+2. **构建只读 `upstream/`，不联网。** 唯一允许联网的入口是 `freeze_upstream.py`。任何「跑脚本时顺手拉一下远程」的写法都会让「产物可复现」这条断言失去意义。
+3. **不手改产物。** 六份文件是生成物，重跑一次即被覆盖。要改内容就改输入（`custom-*.list` / `upstream/` / 构建器判据）。
+4. **不手改 `upstream/`。** 它有 sha256 清单（`upstream/manifest.json`）。手改上游等于悄悄换掉合并基线，而第 6 段只会照着被改过的源重跑、照样全绿 —— 这类失真只能靠第 6b 段挡。
+5. **规则顺序是生死线。** `direct` 必须排在 `ads` 之前。拦截集里有平台主域（`umeng.com` / `tanx.com` / `getui.net`）覆盖了放行清单的功能子域，靠「更具体的规则先命中 DIRECT」保护。顺序颠倒 = 推送和登录失效。
+6. **不给拦截行加 `pre-matching`。** 它会把 REJECT 抽到所有规则之前评估，`direct` 那行永远轮不到。
+7. **改完必跑两层闸门**，缺一不可：`verify_products.py` 判对错，`selftest_negative.py` 证明闸门自己还能抓错。
 
-## 第一步：实测匹配语义（不可跳过）
+## 构建链（三条命令，顺序不可交换）
 
-**黑名单与白名单的语义常常不同，必须分别实测。** 做法：拿客户端日志里真实的 `blocked` / `allowed` 域名，回溯它在源列表里"靠哪条规则被覆盖"。三种关系：`exact`（域名本身在列表里）、`glob`（被通配规则匹配）、`suffix`（只有某个**祖先域**在列表里）。
+```bash
+# ① 冻结上游（唯一联网步骤；已有快照时可用 --check 只校验）
+python skill/scripts/freeze_upstream.py --check    # 先确认快照未被手改
+python skill/scripts/freeze_upstream.py            # 需要更新时
 
-| 判据 | 结论 |
-|---|---|
-| 出现 `suffix` 命中（子域被拦、列表里只有父域） | 黑名单是**后缀语义** → 用 `DOMAIN-SUFFIX` |
-| `allowed` 域名里存在黑名单后缀祖先 | 黑名单是**精确语义** → 用 `DOMAIN` |
-| 白名单含 `qq.com`，但 `sdk.e.qq.com` 仍被拦 | 白名单是**精确语义**，不继承子域 → 用 `DOMAIN` |
+# ② 三支路合成 → build/ads/ads-src.txt + 审计
+python skill/scripts/build_ads.py
 
-实例（Jinx，2026-09-19）：日志中 `sdkquic.e.qq.com` 被拦而列表里只有 `e.qq.com`；`ios.bugly.qq.com` 被拦而列表里只有 `bugly.qq.com` → 黑名单 = 后缀语义。同时白名单含 `qq.com`、`baidu.com`、`taobao.com`，但 `sdk.e.qq.com` / `c3.gdt.qq.com` / `ios.bugly.qq.com` 均被正常拦截 → 白名单 = 精确语义。
+# ③ 六份产物
+python skill/scripts/convert_ruleset.py --src upstream/jinx-3.2.3 --out . \
+    --fixed whitelist.txt --wild whitelist_wildcard.txt \
+    --tag direct --mode exact --naming repo \
+    --guard-against-fixed blacklist.txt \
+    --guard-against-wild blacklist_wildcard.txt \
+    --extra-white custom-direct.list
+python skill/scripts/convert_ruleset.py --src build/ads --out . \
+    --fixed ads-src.txt --tag ads --mode suffix --naming repo \
+    --extra custom-ads.list
+```
 
-**黑白名单语义搞反的后果都是灾难性的**：黑名单用精确 → 子域全漏（日志覆盖率 28/30 → 30/30，即那 7% 全部漏掉）；白名单用后缀 → `qq.com` 一条就把 `bugly.qq.com` / `gdt.qq.com` / `e.qq.com` 下的广告全部放行。
+**日常等价于一条：**
 
-## 通配语义映射表（核心知识）
+```bash
+bash skill/scripts/regen.sh          # 校验快照 → direct → ads → 闸门
+bash skill/scripts/regen.sh --build  # 只重建，不跑闸门
+```
+
+预期读数：`ads 9534` / `direct 49`。⚠️ 这行读数随 `upstream/` 与判据变化，写完必跑闸门核对 —— 它同时校验文档声明与产物实际。
+
+⚠️ `--src` 的写法会**原样进产物表头**（`# source: build/ads` / `# source: upstream/jinx-3.2.3`）。这两条命令写法本就不同，**不是笔误**；别为了「统一」给其中一条加 `./`，否则表头变、第 6 段立刻判负。
+
+⚠️ `--extra` / `--extra-white` 是 `nargs='*'`：**必须放在命令末尾**，或后面紧跟另一个 `--选项`；否则会把后面的位置参数当成文件名吞掉。
+
+## 三支路的职责划分
+
+| 支路 | 输入 | 解决什么 | 别指望它 |
+|:-:|:--|:--|:--|
+| A | `upstream/217heidai/adblocksurgelite.list` | 16 源聚合 ∩ 中国域名清单，中文面广 | 广告子域系统性缺失（清单按主机名枚举，广告域天然不被收录） |
+| B | `upstream/cn/*`（5 个中文源） | 国内 App 广告的一手来源 | 国际广告网络、平台主域 |
+| C | `upstream/jinx-3.2.3/blacklist*.txt` | 补 A/B 的国际广告与长尾 | 已冻结，不会再有新条目 |
+
+⚠️ **A 支路的方向性缺陷要记住**：lite 是「全量 ∩ china.txt」，而 `china.txt` 是**分流用的直连清单**，收的是用户会访问的功能域。拿功能域白名单去筛广告黑名单，方向是反的 —— 所以它既漏广告子域，又混进功能域（`c.uaa.iqiyi.com` 统一账号认证、`cm.passport.iqiyi.com` 登录）。这两类问题分别靠 B/C 补漏、靠功能域判据剔除。
+
+## 七条构建规矩（全部确定性、可断言）
+
+| # | 规矩 | 依据 |
+|:-:|:--|:--|
+| 1 | 只做 DNS 层能表达的减法 | `$` 修饰符、`##` 元素隐藏、`@@\|\|x/path` 不进产物 —— 强行降级等于把条件拦截变成无差别拦截 |
+| 2 | `@@` 例外只做减法，**不生成 DIRECT 行** | 不在拦截集里就落回常规分流，路由自动正确。塞进 `direct` 反而引入顺序依赖 |
+| 3 | 只输出 `DOMAIN-SUFFIX` | 三端语义天然一致，不需要写法映射；且避开最贵的逐条正则扫描 |
+| 4 | 只拦域名，不拦 IP | IPv4 / CIDR 在提取阶段剔除 |
+| 5 | 静态资源硬排除 | label 以 `static` / `download` / `status` / `update` 开头者剔除，**不受成簇豁免**。实证：`s.bdstatic.com`、`static-s.iqiyi.com` 被拦会让页面挂图裂 |
+| 6 | 功能域排除要留豁免 | 含 `push`/`passport`/`login`/`uaa`/`doh`/`im`/`subscription` 等词元且无广告语义者剔除；但 `ad` 词根（`advertising-api.amazon.com`）与平台痕迹（`unity3d`/`snssdk`）必须豁免 |
+| 7 | 灰产靠结构，不靠语义 | 形态是「随机域名 + 归属域下孤立 1 条」。准入 =「成簇(≥2) **或** 含语义」二者之一；真平台天然满足其一，灰产两者都不满足 |
+
+⚠️ **语义判定必须词元级，不许子串。** 曾用裸 `"ad"` / `"stat"` / `"log"` 做子串匹配，把 `static`、`bdstatic`、`download`、`prologue` 全命中，误收 276 条静态资源域。现在按 label 切词元精确比对。
+
+⚠️ **`api` / `sdk` / `gateway` / `openapi` 不是功能词。** 它们几乎出现在每个广告 SDK 端点里（`api-spe.isnssdk.com`、`o-sdk.mediation.unity3d.com`），不具备区分力，曾因此误删一批真广告。
+
+## 加一个新源（可复用的方法论）
+
+1. **先看形态**：拿到源文件，数它有几类写法（`||x^` / 裸域名 / `hosts` / `##` 元素隐藏 / `$` 修饰符），DNS 层能表达的只有前两类。
+2. **再看语义**：黑名单一般是后缀语义（子域也拦），白名单一般是精确语义。搞反的后果都是灾难性的 —— 黑名单用精确会漏光子域，白名单用后缀会整族放行。
+3. **量化独占贡献**：新源对现有并集的**独占**条数是多少？实测过 EasyList_China 对核心四源的独占贡献是 **0**（与 AdGuard Chinese 完全重叠），于是整源排除。不做这一步会白养一个源。
+4. **量误杀面**：拿 `surge-direct.list` 去撞，看新源会打到多少条功能域。
+5. **加进 `freeze_upstream.py` 的 `SOURCES`**，跑一次重新冻结 + `regen.sh`，看漏斗数字与覆盖率断言。
+
+⚠️ **别从 `full` 反筛。** 「从 24 万条里筛出中文广告域」没有权威判据：「中文广告域」不是字符属性，广告与功能同族（`cupid.iqiyi.com` 广告 / `c.uaa.iqiyi.com` 登录），粒度也不可从规则本身推。要么取源原件，要么加源。
+
+## 匹配语义与通配映射（接新源时用）
 
 | 源写法 | mihomo | Surge | sing-box | 说明 |
 |---|---|---|---|---|
-| `x.com`（黑名单） | **`DOMAIN-SUFFIX,x.com`** | **`DOMAIN-SUFFIX,x.com`** | **`domain_suffix: ["x.com"]`** | 后缀语义：域名 + 全部子域 |
+| `x.com`（黑名单） | `DOMAIN-SUFFIX,x.com` | `DOMAIN-SUFFIX,x.com` | `domain_suffix: ["x.com"]` | 后缀语义：域名 + 全部子域 |
 | `x.com`（白名单） | `DOMAIN,x.com` | `DOMAIN,x.com` | `domain: ["x.com"]` | 精确语义：仅该域名本身 |
-| `*.x.com` | **`DOMAIN-SUFFIX,x.com`** 或 `+.x.com` | `DOMAIN-WILDCARD,*.x.com` 或 `DOMAIN-SUFFIX,x.com` | `domain_suffix: ["x.com"]` | ⚠️ mihomo 的 `*.x.com` **只匹配一级且不跨点**，直接用会漏多级子域 |
-| `p*-ad.x.com` | **`DOMAIN-REGEX,^p.*-ad\.x\.com$`** | `DOMAIN-WILDCARD,p*-ad.x.com` | `domain_regex: ["^p.*-ad\\.x\\.com$"]` | mihomo **不支持星号内嵌**；sing-box 用 Go RE2，转换式与 mihomo 相同 |
-| `.x.com` | `.x.com`（多级子域，不含裸域） | — | `domain_suffix: [".x.com"]`（前导点 = 仅子域） | mihomo 专有 |
-| `+.x.com` | `+.x.com`（多级子域 **含**裸域） | — | `domain_suffix: ["x.com"]` | mihomo 专有 |
+| `*.x.com` | `DOMAIN-SUFFIX,x.com` 或 `+.x.com` | `DOMAIN-SUFFIX,x.com` | `domain_suffix: ["x.com"]` | mihomo 的 `*.x.com` **只匹配一级且不跨点**，直接用会漏多级子域 |
+| `p*-ad.x.com` | `DOMAIN-REGEX,^p.*-ad\.x\.com$` | `DOMAIN-WILDCARD,p*-ad.x.com` | `domain_regex: [...]` | mihomo 不支持星号内嵌；sing-box 用 Go RE2，转换式同 mihomo |
+| `.x.com` | `.x.com`（多级子域，不含裸域） | — | `domain_suffix: [".x.com"]` | mihomo 专有 |
+| `+.x.com` | `+.x.com`（多级子域含裸域） | — | `domain_suffix: ["x.com"]` | mihomo 专有 |
 
-**官方依据**
-- mihomo（`wiki.metacubex.one/handbook/syntax/`，域名通配符章节）：`*` 一次只匹配一级；`+` / `.` 可匹配多级但只能作前缀；含裸域用 `+.x`。**与 `DOMAIN-WILDCARD` 不是同一套语法。**
-- Surge（`manual.nssurge.com/rules/domain.html`）：`*` 匹配任意字符**且跨点**（`*.example.com` 匹配 `a.b.example.com`）、`?` 匹配一个字符、支持 `[...]` 字符类 → **与通用 glob 等价**。
-- Surge `DOMAIN-SET`：一行一条，裸域名 = DOMAIN，`.x.com` = DOMAIN-SUFFIX，**不支持 `*`**，上限 100 万条，性能优于 RULE-SET。
-- sing-box（`sing-box.sagernet.org`，rule-set / Headless Rule，内核 1.14.2）：source 格式 JSON 顶层 `{"version": 5, "rules": [...]}`；`domain_suffix` 不带点 = 自身 + 全部子域（域段级边界，实证 `sagernet/sing` 的 `common/domain/matcher.go` trie 实现：`.` 段边界 + 叶子判定），前导点 `.x.com` = 仅子域不含裸域；`domain` = 精确；`domain_regex` = Go RE2。同一 rules 项内域名族字段互为 OR。远程规则集 `type: remote` + `format: "source"` 直接吃 JSON，`.json` 扩展名下 `format` 可省略；`.srs` 是 `rule-set compile` 的二进制产物，远程分发不必用它。
+**官方依据**：mihomo `wiki.metacubex.one/handbook/syntax/`；Surge `manual.nssurge.com/rules/domain.html`（`*` 跨点匹配、`?` 单字符、支持 `[...]` 字符类）；sing-box `sing-box.sagernet.org` rule-set。sing-box 的 `domain_suffix` 不带点 = 自身 + 全部子域（域段级边界，`aexample.com` 不误命中），前导点 = 仅子域。
 
-**转换总原则**：黑名单按**跨级放宽**（mihomo 用 `DOMAIN-SUFFIX` / `+.`），宁多拦勿漏拦；白名单反之要谨慎。
+⚠️ **本仓产物目前零通配**（全部 `DOMAIN-SUFFIX`），上表是接新源 / 新格式时的参照。上游里内嵌星号的 159 条在构建阶段丢弃并计数 —— 这是有意的取舍，不是遗漏。
 
-## 转换步骤
+## 白名单瘦身与顺序保护
 
-用 `scripts/convert_ruleset.py`：
+上游白名单里有大量「为别的规则集准备的」域名（`github.com` / `dns.google` / `jsdelivr.net` / `dropbox.com` / `icloud.com`），整份前插等于把它们全部强制直连，在国内网络下是负优化。
+
+只保留**会被当前黑名单误杀**的条目，判据三种关系：`exact`（等于黑名单精确条目）、`glob`（被通配规则匹配）、`sub`（是黑名单条目的子域 —— 黑名单按后缀拦截，子域同样被误杀）。
 
 ```bash
-# 黑名单：--mode suffix（默认）
-python convert_ruleset.py --src <源目录> --out <输出目录> \
-    --fixed blacklist.txt --wild blacklist_wildcard.txt --tag ads --mode suffix
+python skill/scripts/convert_ruleset.py --src upstream/jinx-3.2.3 --out . \
+    --fixed whitelist.txt --wild whitelist_wildcard.txt --tag direct --mode exact --naming repo \
+    --guard-against-fixed blacklist.txt --guard-against-wild blacklist_wildcard.txt
 ```
 
-产出 2 个文件（黑名单）：
+⚠️ 白名单**必须** `--mode exact`。用 suffix 会把整片广告域放行。
 
-| 文件 | 用途 |
-|---|---|
-| `mihomo-<tag>-classical.yaml` | mihomo `behavior: classical` + `format: yaml`，**100% 保真** |
-| `surge-<tag>-ruleset.list` | Surge RULE-SET，**100% 保真** |
+⚠️ **`guard` 是动作名，产物叫 `*-direct.*`。** 本仓 2026-10-04 已把 `*-white-guard.*` 改名为 `*-direct.*`，脚本里的变量也跟着叫 `direct` —— 别再把动作名当文件名用。
 
-**`--naming repo`（托管场景务必加）**：输出改为 `mihomo-<tag>.yaml` / `surge-<tag>.list`，即**与仓库现有文件名一致**，可直接覆盖上传、客户端 URL 一个字都不用改。不加则用上表的社区通用命名。
+### 平台主域覆盖了功能子域时，怎么办
 
-> 命名对照（`--tag` 用 `ads` / `direct` 时）：`--naming repo` 产出的正是 `mihomo-ads.yaml`、`surge-direct.list` 这类托管常用名。
+**正确做法：保留上层域 + 靠顺序保护。** 错误做法：把上层域从拦截集里删掉。
 
-> 不再输出 `behavior: domain` / Surge `DOMAIN-SET` 变体：这两者既装不下中缀通配，普通条目的子域语义又依赖实现细节。3.9k 条量级下 RULE-SET 的性能损失可忽略。
-
-### 曾提供「差集版」—— 已移除（2026-09-22，留痕）
-
-**曾这样做**：`--delta-ref <现用规则集>` 剔除被对方**深度覆盖**的条目，产出 `*-ads-delta.*`，理由是"省掉重复加载"。
-
-**为什么错**（三条实测，全部反直觉）：
-
-1. **收益只有"列表少 53 行"**（3891 → 3838，约 1.4% 体积）。规则重复本身**没有副作用** —— 同一域名被两套规则命中，结果都是 REJECT。
-2. **代价是把那 53 条的覆盖面外包给对方的 16 条"伞"规则**（AWAvenue 快照里仅 12 `DOMAIN-SUFFIX` + 4 `DOMAIN-KEYWORD` 算深度覆盖）。对方一改，这边**静默漏拦**。
-3. **对误杀零改善** —— 黑名单与差集版对上游白名单的命中数**同为 42 条**（那 53 条被剔的条目，一条都没参与过白名单碰撞）。
-
-⇒ **已回退：`--delta-ref` 参数与 `parse_reference()` 已从脚本删除，不再产出差集版。** 要与第三方列表叠加就直接叠，不做差集。
-
-⚠️ **降级保留的判据**（仍适用于**诊断**场景，不适用于产出）：判断"对方能不能算覆盖"时，只认**深度语义** —— 对方必须能用 `DOMAIN-SUFFIX` / `DOMAIN-KEYWORD` / 通配罩住该域**及其子域**。AWAvenue 那 949 条 `DOMAIN,` 精确匹配**挡不住子域，一条都不作数**。按"精确命中即已覆盖"的错判据会剔掉 **878 条**（旧版实测；该数随快照漂移，更早一次是 874）。**"字面重叠条数"永远不能当覆盖证据** —— 965 条里 864 条字面重叠，其中 852 条是精确匹配。
-
-## 上游滚动时的标准流程（合并个人规则前必读）
-
-上游 `VME98/jinx-rules` **持续滚动**（黑名单只增不减，白名单时有进出）。本仓则带有一层
-个人定制（`custom-ads.list` / `custom-direct.list`）。两者相遇时只有一种正确做法：
-
-> **先拉上游最新，再把定制叠上去。绝不允许反过来 —— 拿旧上游的产物去对文档。**
-
-### 为什么这条必须写成流程，而不能只靠自觉
-
-2026-10-10 真实事故：上游从 `3.1.9` 滚到 `3.2.1`，我确把定制规则提交在 `3.1.9` 的产物上。
-事后看这步本身会让闸门第 6 段判红（源与产物不符 —— CI 当时确实红了），但真正的错在于
-**看到红之后的反应**：不是拉新上游，而是把本地源钉回旧版本让红变绿。
-
-结论：**「拿旧版合并」不是一种静态状态，而是一条政策违反** —— 静态断言抓不住它，
-因为它取决于人在红面前选哪条路。故本仓用三件东西把它固定下来：
-
-1. `skill/scripts/sync_docs.py` —— **写侧门禁**：产物与上游不同步时**拒绝**改文档（退出码 1）；
-2. 本节流程 —— 人的参照（遇到红只准前进，不准后退）；
-3. `verify_jinx_src.py` 第 5b / 6b 段 —— 把「文档写的版本号」与「本地上游快照完整性」变成可判定的。
-
-### 四步（顺序不可交换）
-
-```bash
-# ① 拉上游最新（不要用旧 jinx-rules/，先删干净）
-rm -rf jinx-rules && mkdir -p jinx-rules && cd jinx-rules
-for f in blacklist.txt blacklist_wildcard.txt whitelist.txt whitelist_wildcard.txt version.json; do
-  curl -fsSLO "https://raw.githubusercontent.com/VME98/jinx-rules/master/rules/$f"
-done
-cat version.json          # 记下版本号 / 日期，后面文档仨数字要对得上
-cd ..
-
-# ② 重跑两条生成命令（见下方「完整生成」节），把定制规则叠在新上游上
-# ③ 推平文档读数（22 处，含 4 处上游版本号）
-python skill/scripts/sync_docs.py            # 先演练，看它将改什么
-python skill/scripts/sync_docs.py --write
-
-# ④ 跑闸门（两层都要）
-python skill/tests/verify_jinx_src.py        # 12 段断言，含 5b 版本号 / 6b 合并基线
-python skill/tests/selftest_negative.py      # 证明闸门本身能抓错
+```
+拦截集有 umeng.com（后缀）
+放行集有 aspect-upush.umeng.com（友盟推送通道）
+→ direct 排在前，更具体的规则先命中 DIRECT，推送不受影响
 ```
 
-### 遇到红时的正确反应
-
-| 红在哪 | 含义 | 正确做法 | 错误做法（2026-10-10 我犯过的） |
-|---|---|---|---|
-| 第 6 段「产物可复现」 | 本地源与产物不符，或上游已滚 | 按上面 ①→④ 走一遍 | 把本地源钉回旧版本让红变绿 |
-| 第 6b 段「上游计数自述」 | `jinx-rules/` 不是完整快照 | 删干净重取 | 只补缺失的单个文件 |
-| 第 5b 段「文档版本号」 | 文档写的上游版本与实际不符 | `sync_docs.py --write` | 手改那一处徽章 |
-
-⚠️ **`sync_docs.py` 拒绝在半同步状态下工作是特性，不是故障。** 它报「产物与当前上游
-不同步」时，**不要去改脚本**，要去重跑生成链 —— 它挡下的正是「产物是旧上游、文档写
-新版本」这种读者永远看不见的谎（条数断言全过、无门禁能发现）。
-
----
-
-## 完整生成（两条命令产出全部 6 个文件）
-
-`Jinx` 的实际重跑流程。先取上游源文件：
-
-```bash
-mkdir -p jinx-rules && cd jinx-rules
-for f in blacklist.txt blacklist_wildcard.txt whitelist.txt whitelist_wildcard.txt version.json; do
-  curl -fsSLO "https://raw.githubusercontent.com/VME98/jinx-rules/master/rules/$f"
-done
-cd ..
-```
-
-再跑两条（⚠️ `--src` 的写法会**原样进产物表头**，要与既有文件保持一致；每条命令产出 mihomo / Surge / sing-box 各 1 份）：
-
-```bash
-SK=skill/scripts/convert_ruleset.py
-
-# ① 黑名单
-python $SK --src jinx-rules --out ./out --fixed blacklist.txt --wild blacklist_wildcard.txt \
-    --tag ads --mode suffix --naming repo --extra ./custom-ads.list
-
-# ② 白名单
-python $SK --src ./jinx-rules --out ./out --fixed whitelist.txt --wild whitelist_wildcard.txt \
-    --tag direct --mode exact --naming repo \
-    --guard-against-fixed blacklist.txt --guard-against-wild blacklist_wildcard.txt \
-    --extra-white ./custom-direct.list
-```
-
-预期读数：`ads 3991` / `direct 48`（上游白名单 324 条 → guard 裁到 44，再 +4 extra-white：`*.tange365.com`、`*.wechatos.net`、`*.za.group`、`*.itunes.apple.com`）；sing-box 侧 `ads: domain_suffix=3833 domain_regex=158` / `direct: domain=43 domain_suffix=5`。
-⚠️ 这行读数**随源头漂**，写完必跑下方闸门核对 —— 它同时校验文档声明与产物实际，读数字对不上会当场判负。
-
-**验收**：改动前后对 diff，**只允许三处变化** —— 表头 `# entries` 数字、`# extra:` 那一行、末尾按顺序多出/少掉 N 条；其余正文**逐行不变**。
-
-### 验收闸门（改完必跑）
-
-```bash
-python skill/tests/verify_jinx_src.py          # 12 段 · 68 项断言，与 CI 同源
-python skill/tests/selftest_negative.py        # 负样本：证明闸门本身能抓错
-```
-
-⚠️ **`selftest_negative.py` 要求先有绿基线。** 它是**相对**断言 —— 验证的是「破坏 O 后
-闸门能抓到」，隐含前提是「不破坏时闸门是绿的」。假设前工作区已经脏（例如你刚往
-`jinx-rules/` 追加了一行调试），每条负样本都会在「已经红」的底子上跑，结论既可能假绿
-也可能假红。此时脚本**拒绝出结论并对 `exit=2`**（不借 0 蒙混）。先让
-`python skill/tests/verify_jinx_src.py` 在仓根回到 `0`，再跑它。
-
-`verify_jinx_src.py` 守的正是本仓的立仓之本「规则一条不增不减」，覆盖十二段：
-产品存在性 · 三格式条数一致 · **跨格式逐条语义等价**（不是只比条数）· 表头自述 ·
-文档声明（README / DetailsReadme）· **文档声明的上游版本号**（5b，防「条数对了、
-版本号还是旧的」）· **产物 == 源头重跑结果**（防手改产物、防改了源头
-忘了重跑）· 源头 `custom-*.list` 落盘 · 文案规范（emoji）· 行尾与 BOM ·
-平台清单齐备 · **合并基线 == 上游最新版**（6b，防拿旧版合并）。
-
-⚠️ 第 6b 段的**独立**判据只有「`version.json` 自述计数 == 源文件实际条数」——
-它挡的是「本地源被裁过 / 只取到半个快照」。至于「产物是不是用最新上游生成的」，
-第 6 段已经能发现；6b 只是把「应有几条」显式写出来，让失败原因一眼可读。
-**不要把它当成「拿旧版合并」的守卫** —— 那是一条政策，靠本节的流程与
-`sync_docs.py` 的写侧门禁执行，不靠断言（见上方「上游滚动时的标准流程」）。
-
-退出码沿用全仓四态协议：`0` 过 / `1` 判负 / `2` 环境不达标 / `3` SKIP（缺 `jinx-rules/`
-源文件时第 6 段无法执行）。**SKIP 走独立退出码 3，不借 0 蒙混** —— 姊妹仓曾把 SKIP 与
-「环境不达标」并入同码，导致汇总脚本把环境故障吞成 SKIP → exit 0 假绿。
-
-第 6 段需要上游源文件（按上方「完整生成」节取到 `jinx-rules/`），缺它则该段 SKIP。
-**CI 会先下载源文件再跑**，所以 CI 上这一段是真正执行了的；本地裸跑看到 SKIP 属正常。
-
-⚠️ **`selftest_negative.py` 不是可选项。** 一个只会全绿的闸门与没有闸门等价 ——
-本 skill 记录过「两半都恒空 = 永远绿的空操作」的事故。它在临时副本仓里制造 12 种典型
-错误（手改产物 / 只改表头 / 跨格式差异 / 文档漂移 / 源头改了没重跑 / emoji 违规 /
-平台清单缺一端 / 表格 emoji 宽度 / **半同步拿旧版合并** / **文档版本号漂移** /
-**残缺上游快照**），要求 `verify_jinx_src.py` 逐一判负；**有漏报即判负**，提示判据出现盲区。
-每条负样本还做过**独立性反证** —— 拆掉对应判据后必须恰好那一条翻红，否则说明它是靠
-另一次判负顺带被「抓到」，并未真的守住那一盘（6b 段的合并基线两条就这样被证明不新增守卫）。
-写这个自测当场就抓出了两个真 bug：产物 diff 的 `--src` 写法差异、以及「箭头整段排除」
-导致 `⭐` 句中 emoji 漏报（见上方 emoji 条）。
-
-**sing-box 产物校验**（需要内核，JSON 无表头可 diff，用内核验）：
-
-```bash
-sing-box rule-set compile out/sing-box-ads.json -o /tmp/a.srs        # 结构合法即通过
-sing-box rule-set compile out/sing-box-direct.json -o /tmp/w.srs
-# 再把两份 JSON 用 type:local + format:source 挂进最小配置跑 sing-box check
-```
-
-⚠️ compile → decompile 回读时 `domain_suffix` 会比原文件少十几条：上游同时存在 `*.x.com` 与 `x.com`，转换后同值，compile 的 trie 折叠重复 —— **语义无损**（mihomo / Surge 侧同样保留这些重复行），不是丢数据。
-
-## 自定义追加（`--extra`）—— 上游没有、但你要拦的域名
-
-**动机**：上游规则集总有收录缺口（实测：腾讯广告监控上报端点 `rmonitor.qq.com` 既不在上游黑名单、也不在其白名单）。补规则时如果直接手改 `mihomo-*.yaml`，**下次从上游重跑就被完全覆盖**，而且不会有任何提示。
-
-⚠️ **收录前提：不得与上游白名单冲突。** 白名单的对照面是上游黑名单（**不含 `custom-*.list`**），所以追加进来的域名不会因为"上游已放行"而被白名单豁免 —— 跟上游白名单对着干 = **静默误杀**。
-实例：2026-09-19 曾把 `msg.qy.net`、`rdelivery.qq.com` 加进来（两者的第三方依据都成立，1Hosts Lite 均收录），2026-09-22 复核发现**两者都在上游 `whitelist.txt` 里** —— 已移除。
-
-做法：把追加域名单独放一个文件（托管仓库里叫 `custom-ads.list`），生成时用 `--extra` 并进去：
-
-```bash
-python convert_ruleset.py --src <源目录> --out <输出目录> \
-    --fixed blacklist.txt --wild blacklist_wildcard.txt --tag ads --mode suffix --naming repo \
-    --extra ./custom-ads.list
-```
-
-语义与位置约定：
-
-| 项 | 行为 |
-|---|---|
-| 合并时机 | **条目池构建之后、guard 过滤之前** → 追加项与上游条目同等对待 |
-| 落点 | 输出**末尾**（`entries + added` 的 dedup 顺序），便于 diff 核验 |
-| 表头 | 多一行 `# extra: custom-ads.list(N)`，N = 该文件读入条数 |
-| 路径解析 | 先按 cwd 找；找不到再按 `--src` 目录找（`--extra custom-ads.list` 与 `--extra ./custom-ads.list` 都可用） |
-| 语义 | 普通域名 → `DOMAIN-SUFFIX`（该域 + 全部子域），与黑名单一致 |
-
-**验收判据（必做，防止静默漂移）**：重新生成后与线上文件对 diff，**只允许三处变化** —— 表头 `# entries` 数字、多一行 `# extra:`、末尾按顺序多出 N 条；其余正文**逐行不变**。
-
-⚠️ **别因为"追加快、不用改配置"就滥用**：只加**被第三方权威名单收录**的域名。判定方式见 skill `openclash-config-change` 的 `scripts/scan_leaks.py`。
-⚠️ `--extra` 是 `nargs='*'`：**必须放在命令末尾**，或后面紧跟另一个 `--选项`；否则会把后面的位置参数当成文件名吞掉。
+曾试过「删掉覆盖了放行条目的上层域」，结果 `tanx.com` / `getui.net` / `gepush.com` 整个平台后缀被删 —— 为保一个子域牺牲其余全部，漏拦面积远大于收益。`build_ads.py` 的审计第六节会列出全部重叠项，**只报告不删除**。
 
 ## 引用配置
 
@@ -269,211 +154,141 @@ python convert_ruleset.py --src <源目录> --out <输出目录> \
 
 ```yaml
 rule-providers:
-  jinx-ads:
-    type: file            # 或 http
+  rfu-ads:
+    type: http
+    behavior: classical        # 不能改 domain：文件是逐条规则，不是纯域名列表
+    format: yaml
+    url: "https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/mihomo-ads.yaml"
+    path: ./rule_provider/rfu-ads.yaml
+    interval: 604800
+  rfu-direct:
+    type: http
     behavior: classical
     format: yaml
-    path: ./rule_provider/jinx-ads.yaml
-    interval: 86400
+    url: "https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/mihomo-direct.yaml"
+    path: ./rule_provider/rfu-direct.yaml
+    interval: 604800
 
 rules:
-  - RULE-SET,jinx-direct,DIRECT   # 白名单(精确放行)在前
-  - RULE-SET,jinx-ads,REJECT           # ⚠️ 必须在 DIRECT/GEOSITE,cn 之前
+  - RULE-SET,rfu-direct,DIRECT
+  - RULE-SET,rfu-ads,REJECT
 ```
-
-规则集文件放 `/etc/openclash/rule_provider/`。
 
 **Surge**
 
 ```
 [Rule]
-RULE-SET,https://host/surge-direct.list,DIRECT
-RULE-SET,https://host/surge-ads.list,REJECT,pre-matching,extended-matching
+RULE-SET,https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/surge-direct.list,DIRECT,extended-matching
+RULE-SET,https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/surge-ads.list,REJECT,extended-matching
 ```
 
-| 参数 | 作用 |
-|---|---|
-| `pre-matching` | REJECT 提前到 **DNS / TCP 握手**阶段生效（最接近系统级 DNS 拦截的体验） |
-| `extended-matching` | 额外用 TLS SNI / HTTP Host 匹配，**解决 App 直连 IP 导致域名规则失效** |
+| 参数 | 作用 | 最低版本 |
+|---|---|---|
+| `extended-matching` | 额外用 TLS SNI / HTTP Host 匹配，解决 App 直连 IP 导致域名规则失效 | iOS 5.8 / Mac 5.4 |
+| `pre-matching` | REJECT 提前到 DNS / TCP 握手阶段 | iOS 5.14 / Mac 5.9 |
+| `update-interval=<秒>` | 覆盖默认 86400 | — |
 
-**Surge 参数两条硬约束**（官方文档原文，易踩）：
-1. `pre-matching` **只支持 REJECT 系策略**——写在 `DIRECT` 行上无意义（白名单行不要加）。
-2. `pre-matching` **不能出现在规则集文件内部**，只能写在 profile 的 `RULE-SET` 行上；文件内出现会被当无效行跳过。规则集文件内部**允许**逐行写 `no-resolve` / `extended-matching`。
+**Surge 参数三条硬约束**（官方文档原文，易踩）：
 
-**sing-box**（内核 1.14.2 实测）
+1. `pre-matching` **只支持 REJECT 系策略** —— 写在 `DIRECT` 行上无意义。
+2. `pre-matching` **只能写在 profile 顶层的 `RULE-SET` / `DOMAIN-SET` 行上**，写进规则集文件内部会被忽略（文件内允许逐行写 `no-resolve` / `extended-matching`）。
+3. 同一个 URL **不能**既当 `RULE-SET` 又当 `DOMAIN-SET`。
+
+⚠️ **`pre-matching` 与本仓的白名单互斥。** 它把 REJECT 抽到所有规则之前评估，`direct` 那行永远轮不到 —— 表现是推送收不到、微信登录转圈。本仓配置一律用 `extended-matching`。
+
+**sing-box**
 
 ```json
 {
   "route": {
     "rule_set": [
-      {
-        "type": "remote",
-        "tag": "jinx-direct",
-        "format": "source",
-        "url": "https://host/sing-box-direct.json",
-        "update_interval": "1d"
-      },
-      {
-        "type": "remote",
-        "tag": "jinx-ads",
-        "format": "source",
-        "url": "https://host/sing-box-ads.json",
-        "update_interval": "1d"
-      }
+      { "type": "remote", "tag": "rfu-direct", "format": "source",
+        "url": "https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/sing-box-direct.json",
+        "update_interval": "7d" },
+      { "type": "remote", "tag": "rfu-ads", "format": "source",
+        "url": "https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/sing-box-ads.json",
+        "update_interval": "7d" }
     ],
     "rules": [
-      { "rule_set": ["jinx-direct"], "outbound": "direct" },
-      { "rule_set": ["jinx-ads"], "action": "reject" }
+      { "rule_set": ["rfu-direct"], "outbound": "direct" },
+      { "rule_set": ["rfu-ads"], "action": "reject" }
     ]
   }
 }
 ```
 
-| 字段 | 说明 |
-|---|---|
-| `format: "source"` | JSON 源格式，订阅即用；`.json` 扩展名下可省略（官方约定），写明更稳 |
-| `update_interval` | 缺省即 `1d`；远程规则集在 `experimental.cache_file.enabled` 时缓存 |
-| `outbound: "direct"` | 按用户配置里的直连出站 tag 改；`action: "reject"` 拒绝连接 |
-| ~~`download_detour`~~ | **1.14 起废弃，1.16 移除**，下载改走 `http_client` / 默认出站——新配置不要写 |
+⚠️ `download_detour` 自 1.14 废弃、1.16 移除，新配置不要写。
 
-## 白名单瘦身（guard list）—— 强烈建议
-
-**不要把上游白名单整份插到最前面走 DIRECT。** 白名单通常混着大量"为其他规则集准备的"域名（实测 Jinx 325 条里含 `github.com` / `dns.google` / `jsdelivr.net` / `dropbox.com` / `onedrive.live.com` / `icloud.com`）。整份前插 = 把这些域名全部**强制直连**，在国内网络环境下是负优化。
-
-只保留**会被当前黑名单误杀**的条目。碰撞判定三种关系：`exact`（等于黑名单精确条目）、`glob`（被黑名单通配规则匹配）、`sub`（是黑名单精确条目的子域）。
+## 断言口径
 
 ```bash
-python convert_ruleset.py --src <源目录> --out <输出目录> \
-    --fixed whitelist.txt --wild whitelist_wildcard.txt --tag direct \
-    --mode exact \
-    --guard-against-fixed blacklist.txt --guard-against-wild blacklist_wildcard.txt
+python skill/tests/verify_products.py      # 12 段，与 CI 同源
+python skill/tests/selftest_negative.py    # 负样本：证明闸门本身能抓错
 ```
 
-⚠️ 白名单**必须** `--mode exact`（见"第一步：实测匹配语义"）。用 suffix 会把整片广告域放行。
+12 段：产物存在 · 三格式条数一致 · **跨格式逐条语义等价** · 表头自述 · 文档条数 · **文档上游版本号** · **产物 == 生成链重跑** · **冻结快照自述 + sha256 完整性** · `custom-*.list` 落盘 · 文案规范 · 行尾与 BOM · 平台清单齐备 · 表格 emoji 宽度。
 
-碰撞判定三种关系：`exact`（等于黑名单精确条目）、`glob`（被黑名单通配规则匹配）、`sub`（是黑名单精确条目的子域——黑名单按后缀拦截，所以子域也会被误杀）。
+退出码四态：`0` 过 / `1` 判负 / `2` 环境不达标 / `3` SKIP。**SKIP 走独立码，不借 0 蒙混** —— 「未验证 ≠ 绿」。
 
-实测效果：Jinx 白名单 **325 → 42 条**，裁掉的正是会造成副作用的那批（`github.com` / `dns.google` / `jsdelivr.net` / `dropbox.com` / `icloud.com` 等），保留的都是国内 App 域名（强制直连也无所谓）。
+⚠️ **`selftest_negative.py` 要求先有绿基线。** 它是相对断言 —— 验证「破坏 O 后闸门能抓到」，前提是「不破坏时闸门是绿的」。工作区已脏时它会拒绝出结论（`exit=2`），先让 `verify_products.py` 回 0 再跑它。
 
-引用顺序：`白名单 DIRECT` → `黑名单 REJECT` → `常规分流`。
+⚠️ **断言最容易犯的错：与它要检的东西同构。** 本仓踩过两次：
 
-### 用户问"能不能不上白名单"时怎么答
+| 事故 | 症状 | 修法 |
+|---|---|---|
+| 准入规则与断言同构 | 「产物不得含孤立且无语义条目」与准入判据完全同构，必然全绿 | 换成独立可失败的：静态资源为 0 / 必需域在位 / 规模护栏 |
+| 基线与支路同构 | 拿 Jinx 当覆盖率基线，而 Jinx 就是支路 C，91.5% 等于自证 | 换成 AWAvenue（产物只部分采用）作基线 |
 
-**技术可行**——黑名单独立工作，删掉白名单那行不影响拦截。但要讲清代价，别只说"行/不行"：
+写新断言前先问一句：**「如果这里真的坏了，这条断言会不会因为定义相同而依然通过？」**
 
-1. **量化误杀面**：guard 里每条都去黑名单回溯命中规则，按功能归类。Jinx 42 条的分布：推送 13（jpush/getui/gepush）、登录认证 2（`dypnsapi.aliyuncs.com` 一键登录、`apd-pcdnwxlogin` 微信登录）、网络/DNS 2（`httpdns.meituan.com`、`aedns.weixin.qq.com`）、字节 SDK 6、其他 App 功能 19。**推送和登录是用户可直接感知的故障**，这是劝留的主要理由。
-2. **黑名单多为父域后缀规则**（`SUFFIX:jpush.cn`），误杀范围是整个域名家族，不只是 guard 里列出的那几个子域。
-3. **无法用"从黑名单里扣掉白名单条目"替代**：黑名单后缀 vs 白名单精确，扣减会过度放行整族。要精确放行只能单独挂白名单规则集。
-4. **用客户端日志验证误杀率**：统计日志里 `allowed` 域名被黑名单命中的条数。实测 Jinx 某手机 46 条记录中 `allowed` 16 条，误杀 **0 条**——说明 guard 命中的是长尾场景，短期不上不会立刻出问题。
-5. **白名单不削弱去广告效果**（只放行 42 个功能域名），成本是 1 行配置。默认建议：保留。
-6. **方向澄清（最常被误解）**：用户常问"是不是黑白名单一起用就不会误拦截"。要分开讲：白名单**只做减法**，不会增加任何拦截——若痛点是"广告还去不掉"，加白名单毫无帮助；它防的是反方向的病（推送/登录被误杀）。且"一起用"只消除**上游作者已知的**冲突，"零误杀"保证不了（黑名单自身的超广规则会打到白名单未覆盖的域名，见"踩坑记录"）。
-7. 顺带提醒：SOP 里若写了 `RULE-SET,...,DIRECT,pre-matching`，那是无效写法——`pre-matching` 只支持 REJECT 系策略。
+## 改文件名 = 破坏性改动（订阅地址会变）
 
-## 对外交付：必须写 README
+2026-10-04 那次 `*-white-guard.*` → `*-direct.*` 涉及 52 处引用；2026-10-27 仓库改名 `Jinx` → `RFU-Rules` 涉及全仓 URL。
 
-把规则文件托管成公开仓库时，**必须**附 `README.md`，否则使用者（包括未来的自己）无从下手。
+流程：
 
-**分层原则（2026-09-22 用户口径，返工两次后定稿）**：README 只承载「**怎么用**」—— 拿地址、贴配置、照做即生效的部分；**解释性的、需要展开的、会随上游变动的数字，一律下沉到 `DetailsReadme/DetailsReadme.md`**。这个仓的 README 曾堆到 **219 行 / 8 个平级小节 / 每节一个 emoji + 一条 `---`**，用户原话是「完全的混乱一大堆堆叠」。重做后 143 行，做法：
-- **README 不写「我们怎么改的」**（2026-09-22 用户口径，原话「readme 是产品介绍，不是自说自话的地方」）：归类 / 设计自述、与评审的对话、内部判据与断言名，一律不进 README —— **改动记录进 `CHANGELOG.md`，判据与原理进 `DetailsReadme/`**。也别写决策辩解（如「由对方托管，缓存不归我们管，故不列备用源」）：标题行已把事实说清就够了。自查词表：「为什么…」「不算」「误标」「判据」「原写」「上面是…顺序」「故不」「归我们」。**挪走，别只删。**
-  - ⚠️ 同一条事实换**使用者视角**表述：`手动，不被规则引用`（内部判据）→ `手动，独立于规则链路`（读者能懂）。
-- **emoji 密度与位置（2026-09-22 用户口径）**：**emoji 只许出现在行首，不得落在句中** —— 原话「不得出现在句中，只能句首」。可以挂 emoji 的位置：标题、段落引导符、无序列表项、表格单元格起始、目录条目、文件结构树的各条目；**不要**写「上面用的是 ⭐ 首选 Raw」这类夹在句子中间的写法（正文里 emoji 只出现在句首，正文其余部分保持干净）。标题 emoji 一个就够，别叠；密度上 README 约 20+、下沉文档 50+ 才不会显得"光秃"。本仓 `verify_jinx_src.py` 第 8 段就是这条的断言（`skill/tests/verify_jinx_src.py`）：按「emoji 之前只许出现结构字符（标题 / 列表 / 引用标记、表格竖线、`[`、树形框线、缩进）」判定，并设密度下限。
-  - ⚠️ **判定器自己踩过两个坑**（2026-10-04 写断言时实测，两处都会给出错误结论）：① **FE0F 必须并入前一个 emoji 整体消费** —— `⚖️` = U+2696 + U+FE0F，若拆成两个 emoji 匹配，第一轮在行首命中 `⚖` 通过、第二轮命中 `FE0F` 时前缀非结构字符 → **对完全合规的段首引导符给出假红**（本仓 7 处 `⚖️ / ⏱️ / ⚠️` 行首引导符全中招）。② **箭头不能整段排除** —— `→` 是 U+2192（属 U+2190-21FF 段）、`⬅⬆⬇` 在 U+2B05 等，但同一段里还住着**真 emoji**（`⭐` U+2B50、`⬛` U+2B1B）；若把 U+2B00-2BFF 整段当箭头排掉，`上面用的是 ⭐ 首选 Raw` 这种句中 emoji 会**静默逃过检查**。这条漏报是负样本自测当场抓到的 —— 所以 `skill/tests/selftest_negative.py` 里专门留了一个用 `⭐` 造的负样本守它。
-- ⚠️ 标题带 emoji 后锚点会**多一个前导横线**：`## 📥 订阅` → `#-订阅`，`## 📥 1 规则集` → `#-1-规则集`。改标题必须同步仓内所有 `](#...)`（README 徽章里的许可链接最容易漏）。
-- ⚠️⚠️ **标题 emoji 绝不能带变体选择符 U+FE0F**：`⚙️` / `🛠️` / `⚠️` 都是「基字符 + FE0F」，FE0F 属 Mn 类，**slug 会保留它** → 锚点里混进一个不可见字符（`## ⚙️ OpenClash` → `#️-openclash`），手写的 `#-openclash` 点不动。**只用单码位 emoji**（📥 📋 📖 📚 🚧 🔧 🔗 🤝 🔄 📁 📌 ⭐ ✅ ❌ 都安全）。
-- **锚点别靠推算**：本仓用 `github-slugger`（GitHub 自己用的实现）验证，比自己写正则可靠 —— 我第一版校验器用 `[^\w]` 当字符类，把 FE0F 删掉，给了假通过。命令行做法：`npm i github-slugger` 后按「读 md → 对每行 `^#{1,6}\s+` 取标题 → `slug()` → 与文档内 `](#...)` 比对」，每个文档一个 slugger 实例（同文档重名标题会加 `-1` 后缀）。
-- **第三方规则集并进「订阅」的清单末尾** —— 表格末行 + 独立的地址块，**不单开一节挂在页面后半段**（用户 2026-09-22：「应该在规则集的最下面，而不是 README 的最下边」）。2026-09-28 起进一步分层：**自家规则集与第三方规则集各一张表、各一个 `###` 子节**，不混在一张总览表里（第三方行是官方直链、单源，混排会让「两个源」的表述失真）。
-- **小节顺序按使用动线**（2026-09-28 增补版式）：目录导航 → 订阅（自家 / 第三方分表 + 每源一块地址）→ 接入（**每个客户端一个 `<details>` 折叠块**，几十行配置不怼正文；摘要行 `平台名 · 关键机制`，首选项 `open`）→ 规则顺序 → 客户端前置开关 → 文档索引 → 来源与许可。
-- **GitHub 原生 alert 做视觉分级**（2026-09-28）：全局性硬警告用 `> [!WARNING]` / `> [!IMPORTANT]` blockquote（GEOSITE,cn 顺序坑、OpenClash `china_ip_route`），普通操作提示仍用行首 💡。alert 内自带图标，**内文不再叠加 emoji**；纯命令类操作（uci 三连）放 `<details>` 收起，只留一行回滚说明在外。
-- ⚠️ **新增一个客户端平台 = 一次改全套，禁止只改"看得见的那几处"。** 平台清单散落在多个位置，漏改任何一处都会留下**静默失真**——最典型的是**仓库简介**（GitHub 页面顶部、列表、搜索结果都用它，而它存在建仓脚本的 `--description` 默认值里，平时没人看）。2026-10-04 实证：09-28 加了 sing-box 后，README 订阅表 / 接入节 / 徽章都更新了，但**线上简介一直是「mihomo / Surge」**，漏了整整一周无人发现。
-  - 必查清单（按"最容易漏"排序）：① **仓库简介**（`upload_to_github.py` 的 `--description` 默认值 **＋ GitHub 上的实际值**，改名/改述后要 `gh repo edit --description` 或脚本 `--description` 覆盖）；② README 顶部 slogan 与徽章行；③ README 订阅表 / 接入节 / 能力矩阵；④ `DetailsReadme` 的订阅表、转换原理表、文件结构；⑤ 本文件「适用」与「通配语义映射表」；⑥ `convert_ruleset.py` / `verify_jinx_src.py` 的 docstring 与注释里列举客户端的句子；⑦ 第三方规则（AWAvenue）的对应行。
-  - **判据**：`grep -rn` 搜「现有平台名」的**两两组合**（如 `mihomo.*Surge`、`Surge.*sing-box`），**逐条语义甄别**——不是所有命中都要改（描述历史状态的句子应保持原样，如 CHANGELOG 里"当年只有两平台"的记录），但每一处都要显式判定"该改"或"为何不改"。
-  - 该判据已固化为断言：`verify_jinx_src.py` 第 10 段扫面向外部的说明（仓库简介来源、README、DetailsReadme、SKILL），要求平台清单与产物实际**齐备**。
-- ⚠️ **改一个产物的文件名 = 一次改全套，且这是「破坏性改动」（订阅地址变更）。** 与"新增平台"同级：名字散落在生成参数、文档、示例、断言、源头注释五层，漏一处就留下静默失真。2026-10-04 实证：`*-white-guard.*` → `*-direct.*` 共涉及 52 处引用。
-  - **先想清楚代价再动手**：改名 = **旧订阅地址 404**。姐妹仓 `Self-Configuration` 与本仓 README 的 `skill/SKILL.md`「删旧文件前先确认引用方已迁移」都写明：规则集 URL 404 会导致客户端拉取失败，无法确认引用方已迁移时**宁可保留旧文件并标注废弃**。本仓 2026-10-04 这次是**用户明确确认接受旧地址失效**才直接删的。先例：当年 mihomo 侧 `.list` → `.yaml` 改名，CHANGELOG 亦明确记了「mihomo 旧地址失效」。
-  - **单一真源是生成参数**：产物名由 `convert_ruleset.py --tag <名>` 决定，所以**先改 `--tag`**（`verify_jinx_src.py` 的 `REGEN` 表与 `PRODUCTS` 表随之同步），再重跑生成——**不要用 `git mv` 手改文件名**，否则产物与生成器脱节，`--check` 式的可复现断言会红。
-  - 改完**必须验证内容零改动**：新旧产物**逐字节比对**（`fc` / `cmp` / Python `==`）。纯改名不该动任何一个字节；有差异说明 `--tag` 之外还碰到了别的东西。
-  - 必查清单（按"最容易漏"排序）：① 生成参数与断言表（`REGEN` / `PRODUCTS`）；② README 订阅表 / 接入节示例 / 目录锚点；③ `DetailsReadme` 订阅表与转换原理表；④ 本文件的生成命令、验收命令、映射表；⑤ `custom-*.list` 表头那句「不要手改 xxx-yyy.*」；⑥ 示例里的 **provider / tag 名**（`jinx-white-guard` → `jinx-direct`，文件名变了名字要对齐）；⑦ 仓库简介若含文件名。
-  - **CHANGELOG 一律不改**：那里写的是"当时叫什么"，改了就是篡改历史（本仓 2026-10-04 那次保留了 6 处旧名，正确）。
-  - 判据：`grep -rn '<旧名>'` —— 期望命中**只剩 CHANGELOG** 与显式的历史说明。
-- 下沉对象：转换原理表、白名单推导过程、CDN 缓存与生效判据、客户端参数逐条解释、文件结构树的说明、客户端开关的机理与副作用。
-- 下沉文档首行要写「这是 README 之外的补充材料」，末尾给「← 回到 README」，章节与 README 的小节对应，便于对照。
+1. **先想清代价**：改名 = 旧订阅地址失效。无法确认引用方已迁移时，宁可保留旧文件并标注废弃。
+2. **单一真源是生成参数**：产物名由 `convert_ruleset.py --tag <名>` 决定。先改 `--tag`，再让 `verify_products.py` 的 `REGEN` / `PRODUCTS` 表同步，然后重跑 —— **不要用 `git mv` 手改文件名**，否则产物与生成器脱节，可复现断言会红。
+3. **改完验证内容零改动**：新旧产物逐字节比对。纯改名不该动一个字节。
+4. **仓库改名后立刻验证重定向**：`curl -sI` 旧 raw 地址，确认 301 到新路径；jsDelivr 需显式换前缀（它不跟随仓库重定向）。
 
-下列八块是**内容必须覆盖**的点（可分布在 README 与 DetailsReadme 两个文件里，不必都塞 README）：
+必查清单（按最容易漏排序）：生成参数与断言表 → README 订阅表 / 接入示例 / 目录锚点 → DetailsReadme 订阅表与原理表 → 本文件的生成命令与映射表 → `custom-*.list` 表头那句「不要手改」→ 示例里的 provider / tag 名 → 仓库简介（`gh repo edit --description`）。
 
-1. **来源与致谢 + 许可状态**：写清上游仓库链接、对应版本、上游是否声明 License（无声明就明确写"无，本仓库不主张许可"）。**绝不把转换产物的版权据为己有**，并给出下架渠道（"作者提 issue 即删"）。
-2. **选文件决策表**：按"你已有的规则集 / 客户端 / 保真 vs 性能"三档给结论，别让用户自己猜文件名。
-3. **可直接复制的配置片段**：每个客户端一段，含**规则顺序警告**和参数说明。
-4. **双地址**：每个文件同时给 GitHub raw 与 jsDelivr 两种 URL，**Raw 在前**（见下"托管到公网"节）。
-5. **已知坑**：超广通配误杀、高性能格式丢中缀通配、CDN 缓存、顺序、参数限制。
-6. **重新生成方式（含脚本本体）**：只给命令**不算可复现**——脚本必须**随仓库一起上传**（放 `skill/` 或 `tools/` 目录），README 里写全"clone 下来就能跑"的流程（取源文件 → 跑脚本 → 覆盖上传），并标注源文件在上游的准确路径。实测教训：README 里只写 `python convert_ruleset.py ...` 而仓库无此脚本，使用者第一行就报 `can't open file 'convert_ruleset.py'`。
-7. **告知可复现性是"已实测"的**：重跑一遍并与仓库现存文件做 `diff`，把结果写进 README（"逐字节一致"）。这既是给使用者的信心，也是自己下次改动时的回归基线。
-8. **客户端前置开关 / 环境陷阱（最容易被漏掉的一块）**：规则本身完全正确，也可能因为客户端的一个开关而**静默失效**——没有报错、规则命中日志也正常，但流量根本没走规则。**这类内容必须单独成节，不能塞进"已知坑"一笔带过**，它是"规则配了却没效果"的头号原因。至少覆盖：
-   - **OpenClash / mihomo**：开着「绕过中国大陆 IP」（`china_ip_route=1`）时，OpenClash 生成配置阶段会把 `rule-set:oc-cn-domain` 注入 `dns.fake-ip-filter`（源码 `/usr/share/openclash/yml_change.sh`）→ 命中该集合的域名 DNS 返回**真实 IP**（不是 `198.18.x.x`）→ 又在防火墙层被 `ip daddr @china_ip_route … return` 放行 → **流量不进内核，规则引擎没有机会执行**。
-     - 判据：某域名在规则集里查得到，但客户端日志 `grep` 返回 **0 条**（没进内核 = 没日志）；或抓 DNS 看同一设备上并存"真实 IP"与"fake-ip"两种应答。
-     - 解法：`uci set openclash.config.china_ip_route='0'` + commit + restart。副作用仅"域名访问多一跳内核"，纯 IP 直连不受影响。
-   - **Surge**：`pre-matching` 只能跟 REJECT 系策略（DIRECT 加它无效）；`extended-matching` 是"App 直连 IP 时按 TLS SNI / HTTP Host 兜底匹配"的关键，缺了它域名规则会大批失效。
-   - 通用验收三步：① DNS 应答从真实 IP 变 fake-ip；② 请求被拒（连接/TLS 失败）；③ 日志出现 `match RuleSet(<名字>) … using REJECT`。
+⚠️ **CHANGELOG 一律不改**：那里写的是「当时叫什么」，改了就是篡改历史。
 
-参考实现：`Jinx` 仓库 README 的 §五「OpenClash 实战陷阱」即为该块的标准写法。
+## 对外交付：README 规范
 
-
-## 托管到公网（Surge 必需）
-
-Surge 只能引用 **URL 或本地文件**；mihomo 可用本地文件。用 `scripts/upload_to_github.py` 一步建库并上传：
-
-```bash
-python upload_to_github.py --token <PAT> --repo Jinx --files a.list b.list
-```
-
-**仓库已存在、只想增量更新（含 `skill/` 等子目录）时用 `scripts/upload_repo.py`**：
-
-```bash
-python upload_repo.py --token <PAT> --repo <owner>/<name> --message "..." \
-    --map custom-ads.list:custom-ads.list \
-          _regen/mihomo-ads.yaml:mihomo-ads.yaml \
-          README.md:README.md \
-          /abs/path/convert_ruleset.py:skill/scripts/convert_ruleset.py
-```
-
-比 `upload_to_github.py` 多三件事：① 支持 `本地路径:仓库内路径` 映射，可写子目录（后者只能传到根目录）；② 上传后**自动回拉并比对 md5**，避免"以为传上去了"；③ 网络抖动重试。
-⚠️ 映射用 `rpartition(':')` 切分，**不能**用 `partition` —— Windows 路径 `C:/...` 自带盘符冒号，会切到 `C`。
-
-**上传后如何确认生效（重要，别被 CDN 骗）**：
-- `raw.githubusercontent.com` 背后是 CDN，**更新后数分钟内可能仍返回旧内容**，且 `?cb=<随机>` cache-buster 在 raw 上**不可靠**。实测同一批上传，4 个文件里 1 个已是新的、3 个仍是旧的。
-- **权威判据 = GitHub Contents API**（直读 git 对象，不过 CDN）：`GET /repos/<owner>/<repo>/contents/<path>?ref=main` → base64 解码 → 比对本地 md5 + 打印末 3 行。
-- jsDelivr 同理更慢，必要时 purge（见下）。
-
-- **Token 最小权限**：classic 只勾 `public_repo` 即可（能建公开仓库+传文件，动不了私有代码）；fine-grained 需 Contents(read/write) + Administration(read/write)。
-- **仓库必须 public**：私有仓库的 raw 地址要认证，Surge 拉不到。
-- **引用优先 Raw GitHub**：`https://raw.githubusercontent.com/<user>/<repo>/main/<file>`。官方直读源，不经第三方 CDN，文件增删改名后与仓库一致；代价是**国内常被墙**，用的人要能直连 GitHub。注意 raw 自身也有边缘缓存（见上「上传后如何确认生效」）—— 本轮实测推送后 raw 约 **3 分钟**才同步，且 `?v=` 对它无效，**别拿 raw 当"已生效"的判据**。
-- **备用 jsDelivr 镜像**：`https://cdn.jsdelivr.net/gh/<user>/<repo>@main/<file>`。国内直连更稳；多一层第三方缓存，更新同步更慢、删文件后须 purge 才 404。
-- **README 里两种地址都要给，且 Raw 在前**（不要只给 jsDelivr）。版式按这条来：**一张总览表 + 每个源一块 fenced 地址块** —— 表格（客户端 / 文件 / 格式 / 条数 / 用途）一眼看全所有文件，然后 ⭐ 首选 Raw 一块（每行一个完整 URL）、🔁 备用 jsDelivr 一块。GitHub 的 fenced 块自带复制按钮，**但别给每个文件各拆一块**：4 份 × 2 源 = 8 块，标题 / 条数 / 说明夹在块与块之间，读者找不到头（2026-09-22 返工一次，8 块 → 2 块）。也别把备用源塞进小字备注（给了等于没给）。配置片段里写 Raw，备用源的换法写在片段下方的说明行里。README 里不要出现"只推荐一个、另一个自求多福"的写法。
-  - **例外：第三方规则集只给 Raw 源。** 它由别人托管、缓存我们 purge 不了，多列一个 jsDelivr 备用等于把对方的缓存层写进我们的文档，出问题也解释不清（2026-09-22 用户口径）。本仓做法见 README「搭配：AWAvenue-Ads-Rule」节。
-- **删除文件后必须 purge jsDelivr 缓存**：CDN 会继续提供已删文件（`raw` 已 404，但 `cdn.jsdelivr.net` 仍返回 200，两者不一致）。逐文件请求 `https://purge.jsdelivr.net/gh/<user>/<repo>@main/<file>`，返回 `"status": "finished"` 即生效，之后即 404。
-- **删旧文件前先确认引用方已迁移**：规则集 URL 404 会导致客户端拉取失败。若无法确认，宁可保留旧文件并在 README 标注废弃（本次用户明确要求删除才删）。删除时保持**仓库名、文件名、CDN 域名不变**，只移除旧文件。
-- 完成后提醒用户撤销 token（`github.com/settings/tokens`）。
+- **README 只承载「怎么用」**：拿地址、贴配置、照做即生效。解释性的、需要展开的、会随上游变动的数字，一律下沉到 `DetailsReadme/`。**README 不写「我们怎么改的」** —— 改动记录进 `CHANGELOG.md`，判据与原理进 `DetailsReadme/`。
+- **emoji 只许出现在行首**，不得落在句中。可用位置：标题、段落引导符、列表项、表格单元格起始、目录条目、树形框线。标题 emoji 一个就够。
+- **标题带 emoji 后锚点多一个前导横线**：`## 📥 订阅` → `#-订阅`。改标题必须同步全仓 `](#...)`。
+- **标题 emoji 绝不能带变体选择符 U+FE0F**：`⚙️` / `⚠️` 会让锚点混进不可见字符，手写链接点不动。只用单码位 emoji。
+- **双地址，Raw 在前**：一张总览表 + 两块地址块（⭐ Raw 一块、🔁 jsDelivr 一块）。别每个文件各拆一块。
+- **例外：第三方规则集只给 Raw 源** —— 缓存我们 purge 不了，多列一个备用源等于把对方的缓存层写进本文档。
 
 ## 踩坑记录
 
-- ⚠️ **`write_text()` 会按平台改行尾 —— 产物因此跨平台不可复现（2026-10-04 实测修复）**：Python 的通用换行转换把 `\n` 写成 `os.linesep`，于是 `pathlib.write_text(text)` 在 **Windows 出 CRLF、Linux 出 LF**。后果是同一个脚本在两平台产出**不同字节**：仓库里 mihomo / Surge 四份产物（Windows 生成）是 CRLF、sing-box 两份是 LF，而 CI 在 Linux 上重跑生成必得 LF → 与仓库内容不符，「产物可复现」断言当场判负。
-  - 修法两条腿，**缺一不可**：① 写出时显式 `write_text(text, encoding='utf-8', newline='')` 钉死 LF（`newline=''` 关闭转换；用 `write_bytes` 亦可）；② 仓根加 `.gitattributes` 声明 `* text=auto eol=lf`，管住检出与提交。只改脚本、仓库内容仍是 CRLF，CI 照样判负；只归一化文件、脚本不改，下次在 Windows 重跑又会写回 CRLF。
-  - 验证：改后重跑生成，与改动前逐字节**归一化行尾**后比对 —— 必须「仅行尾不同、内容零改动」。
-  - 📌 规则集按行解析、客户端都会 trim 行尾，CRLF 与 LF **对功能等价**；这事只为「跨平台产物逐字节可复现」，不改语义。
+- ⚠️ **`write_text()` 会按平台改行尾，产物因此跨平台不可复现。** 必须 `write_text(text, encoding='utf-8', newline='')` 钉死 LF，再加 `.gitattributes` 声明 `* text=auto eol=lf`。两条腿缺一不可：只改脚本，仓库里仍是 CRLF，CI 判负；只归一化文件，Windows 重跑又写回 CRLF。
+- ⚠️ **mihomo YAML 里的 `DOMAIN-REGEX` 要用单引号包**：正则含反斜杠，双引号会把 `\` 当转义吃掉。本仓产物已无正则，但接新源时仍会遇到。
+- ⚠️ **超广通配会误杀，且白名单救不了。** `ad.*`、`ad-*` 这类一条覆盖几百条（实测 `ad.*` 单条吃掉 855 条精确条目）。这类误杀对象不在白名单里 → 白名单预知不了，只能靠运行观察。本仓的处理是**不产出通配**。
+- ⚠️ **脏数据不要整条丢。** 源里会混 URL 式条目（`https://us.l.qq.com/exapp`），用正则取出 host 后照常处理。
+- ⚠️ **`raw` 不能当「已生效」的判据。** 它自己有边缘缓存，推送后约 3 分钟才同步，`?v=` 无效。权威判据是 GitHub Contents API（直读 git 对象）：`GET /repos/<owner>/<repo>/contents/<path>?ref=main` → base64 解码后比对本地 md5。
+- ⚠️ **Windows 快照命名别用 URL 当文件名。** URL 里的 `:` 在 Windows 非法，曾生成一个名为 `https` 的目录、快照全丢。用 `basename + sha1 前 8 位`。
+- ⚠️ **`reduce-memory` 不是 mihomo 配置项**（SEO 站编的）；`GOMEMLIMIT` 只能注入环境变量，不是 YAML 字段。
 
-- **后缀别乱起（三个平台方向不同）**：
-  - **mihomo 侧一律 `.yaml`**：`format` 默认就是 `yaml`，文件内容是顶层 `payload` 列表。用 `.list` 会让抄配置的人漏写 `format`（默认按 yaml 解析 → 报错或空规则），或被迫多写一条 `format: text`。社区 mihomo 规则仓库一律 `.yaml` / `.mrs`。
-  - **Surge 侧一律 `.list`**：远程 RULE-SET 社区惯例是 `.list`，DOMAIN-SET 常见 `.txt`。`.conf` 是 Surge **主配置文件（profile）专用**，用它会让人误以为是 profile。
-  - **sing-box 侧一律 `.json`**：rule-set source 格式官方约定扩展名——文档明确 `format` 字段在 path/url 用 `json` / `srs` 扩展名时可省略。`.srs` 是 `rule-set compile` 的二进制产物，远程分发 JSON 即可（`format: "source"`），别用 `.srs` 后缀装 JSON。
-  - 后缀本身不影响各端解析（都按内容识别），但它是**给抄配置的人看的** —— 用错就是文档错误。
-- **mihomo YAML 里的 `DOMAIN-REGEX` 要用单引号包**：正则含反斜杠（`^p.*\-ad\.x\.com$`），YAML 双引号会把 `\` 当转义序列吃掉；裸写则要赌内容里没有 `: ` / ` #` 之类元字符。单引号是唯一"完全字面"的写法（内部 `'` 写 `''`）。实测 149 条正则经 `yaml.safe_load` 后反斜杠完整保留。
-- **超广通配会误杀，且白名单救不了**：`ad.*`、`ad-*` 这类一条覆盖几百条的规则（实测 `ad.*` 单条吃掉 855 条精确条目）。转 `DOMAIN-REGEX` 后任何 `ad.xxx.com` 都被拒。**检测方法**：把规则集里所有 REGEX / WILDCARD 逐条去匹配一批真实正常域名（知名站点 + 客户端日志里的 `allowed` 域名），命中即潜在误杀。实测 Jinx 149 条 REGEX 中 84 条属"仅一段固定标签"的宽泛规则，用 49 个正常域名打入即命中 3 条（`^pangolin.*$` 命中 `pangolinstore.com`、`^adx\..*\.com$` 命中 `adx.example.com`、`^jad\-api\..*\.com$` 命中 `jad-api.qq.com`）。**这类误杀对象不在上游白名单里 → 白名单预知不了**，只能靠运行观察。
-- **脏数据**：源文件里会混进 URL 式条目（如 `https://us.l.qq.com/exapp`、`https://ynuf.aliapp.org/savewb.json?`）。**不要整条丢弃**——用正则取出 host 后按普通域名规则处理（`host_of()`），否则白丢几条真实广告域。
-- **旧产物别急着从仓库删**：用户客户端可能仍引用着旧 URL，删掉会导致规则集拉取失败、代理直接挂掉。改成"新文件名 + README 标注旧文件已废弃"更安全。
-- **mihomo 日志/API 没有 URL 字段**：只有 host / sniffHost，没有 path。别指望从日志还原完整下载地址（详见下方"定位规则源"）。
-- **`reduce-memory` 不是 mihomo 配置项**（SEO 站编的）；`GOMEMLIMIT` 只能注入环境变量，不是 YAML 字段。
+## 客户端开关（规则对了也可能不生效）
+
+**OpenClash / mihomo**：`china_ip_route=1`（绕过中国大陆 IP，默认常开）会把 `oc-cn-domain` 注入 `dns.fake-ip-filter` → 命中域解析出真实 IP → 防火墙判定属大陆直接放行 → **流量不进内核，规则引擎没机会执行**。
+
+判据：某域名在规则集里查得到，但客户端日志 `grep` 返回 0 条（没进内核 = 没日志）。
+
+```bash
+uci set openclash.config.china_ip_route='0'
+uci commit openclash
+/etc/init.d/openclash restart
+```
+
+**通用验收三步**：① DNS 应答从真实 IP 变 fake-ip；② 请求被拒（连接 / TLS 失败）；③ 日志出现 `match RuleSet(<名字>) … using REJECT`。
 
 ## 定位规则源（拿不到 HTTPS 路径时）
 
-抓包只能拿到域名（SNI / DNS），路径在 TLS 内。**成本更低的办法**：拿 App 侧强特征（更新时的文件名、版本号、目录结构、报错文案）去搜 GitHub / 代码搜索，再用其中的数据（版本号、条目数）与 App UI 显示交叉校验——从"像"升级为"就是"。
-
-实例：用户给出 Jinx 更新时的 8 个文件名 → 直接命中 `VME98/jinx-rules` → `version.json` 的 `version` 和 `domainBlacklistCount` 与 App 显示完全一致 → 坐实。
+抓包只能拿到域名（SNI / DNS），路径在 TLS 内。成本更低的办法：拿 App 侧强特征（更新时的文件名、版本号、目录结构、报错文案）去搜 GitHub 代码搜索，再用其中的数据（版本号、条目数）与 App UI 显示交叉校验 —— 从「像」升级为「就是」。

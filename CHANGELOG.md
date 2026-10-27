@@ -4,6 +4,68 @@
 
 ---
 
+## 2026-10-27（二）· 定位重构：仓库更名 `RFU-Rules`，上游冻结，ads 改为三支路合成
+
+> 📌 触发事件：上游 `VME98/jinx-rules` 自 `3.2.4` 起只发加密包（`new-rules/*.enc`，P-256-ECIES，
+> 需接收方私钥），明文 `rules/` 永久停在 `3.2.3`。继续做「格式转换镜像」等于把一份不再更新的
+> 数据当新产品交付 —— 而且是不会报错的静默失真。故一次性把定位、数据源、断言全部换掉。
+
+**一、上游冻结，不再跟随**
+
+- 📦 新增 `upstream/`：把 `3.2.3` 明文（钉死 commit `c85751d`）+ 5 个中文源 + 217heidai lite
+  + `china.txt` 全部落盘入库，附 `manifest.json`（每个文件的 sha256 与取用日期）。
+- 🔒 **构建不联网**：`convert_ruleset.py` / `build_ads.py` 只读 `upstream/` 与 `build/`。
+  唯一允许联网的入口是新脚本 `skill/scripts/freeze_upstream.py`（`--check` 只校验）。
+- 🚫 不再轮询上游、不尝试解密。`jinx-rules/`（gitignore 的临时下载目录）彻底废弃。
+
+**二、ads 改为三支路合成 `3991 → 9534`**
+
+- 🧬 支路 A：`217heidai/adblocksurgelite.list`（8480）· 支路 B：5 个中文源（1392）·
+  支路 C：Jinx `3.2.3` 明文（3815）。
+- 🔢 漏斗：合并去重 11914 → `@@` 例外减法 −5 → 静态资源 −60 → 功能域 −349 →
+  灰产随机长尾 −1934 → 语义上提 9534。
+  其中 C 支路：`*.x.com` 降为后缀 105 条，内嵌星号无法表达 159 条（丢弃并计数）。
+- 🎯 覆盖率：对 AWAvenue（独立基线，产物仅部分采用）**94.1%**；对 Jinx·中国生态（参考）**95.4%**。
+- 🧱 产物构成变化：**全部 `DOMAIN-SUFFIX`，`DOMAIN-REGEX` / `DOMAIN-WILDCARD` 归零** ——
+  三端语义天然一致，也避开了最贵的逐条正则扫描。
+- 🚫 明确不做的两件事：不拦 IP（IPv4/CIDR 剔除）；不收录赌博与色情灰产（靠「成簇或语义」
+  结构判据排除，不做人工逐条筛选）。
+- 🧩 `custom-direct.list` 追加 `*.aspect-upush.umeng.com`（友盟推送建连入口）→ 放行 `48 → 49`。
+  拦截集有 `umeng.com` 后缀会罩住它，靠「direct 排在前面」保护，**不从拦截集里删主域**。
+
+**三、仓库更名 `Jinx` → `RFU-Rules`（破坏性：订阅地址变更）**
+
+- 🏷️ GitHub 仓库改名为 `RiverFlowsInUUU/RFU-Rules`，仓库简介同步更新（`gh repo edit --description`）。
+- 🔗 六份产物**文件名不变**（`mihomo-ads.yaml` 等本身不含 `jinx`），订阅地址只有仓库名那一段变。
+  旧地址由 GitHub 重定向，但 `jsDelivr` 不跟随仓库重定向，需换新前缀。
+- 🏷️ 配置示例里的 provider / tag：`jinx-ads` / `jinx-direct` → `rfu-ads` / `rfu-direct`。
+
+**四、断言体系改造（承诺变更）**
+
+- 📌 不再承诺「规则一条不增不减」—— `ads` 是合成集，与任何单一上游都不等长。改为三条：
+  三端逐条等价 · 产物 == 生成链重跑结果 · 条数与文档一致。
+- 🔁 `verify_jinx_src.py` → **`verify_products.py`**（保留 12 段骨架）：数据源改仓内快照；
+  第 6 段 ads 侧先跑 `build_ads.py` 再跑 `convert_ruleset.py`；
+  第 6b 段新增 **`upstream/` 全部文件 sha256 vs manifest** 校验（手改上游是唯一无法被
+  「重跑一致」发现的失真）。
+- 🗑️ `sync_docs.py` 退役：它的职责是「上游滚了、产物没跟上时拒绝改文档」。上游冻结后这个
+  风险整体消失，文档读数漂移改由第 5 / 5b 段断言守。
+- 🧪 `selftest_negative.py` 扩到 **13 个负样本**，新增「手改 upstream 快照」一条；
+  该样本特意选 `china.txt`（只进覆盖率播报、不进产物），以证明 sha 判据是一盘独立的守卫。
+
+**五、清理**
+
+- 🗑️ 删除 `test/`（`build-cn-adblock.py` 及其中间产物）—— 构建器已归位为 `skill/scripts/build_ads.py`。
+- ➕ 新增 `skill/scripts/build_ads.py`（三支路构建器 + 审计）、`regen.sh`（一条命令重跑六份产物）。
+
+**验收**
+
+- ✅ `verify_products.py`：**70 passed / 0 failed**（含第 6 段六份产物逐字节可复现、第 6b 段 sha256 全一致）。
+- ✅ `selftest_negative.py`：**13 抓到 / 0 漏报**。
+- ✅ `freeze_upstream.py --check`：12 个源文件全部与 manifest 一致。
+
+---
+
 ## 2026-10-23（五）· 放行 47 → 48：新增 `*.itunes.apple.com`
 
 > 📌 用户指定：任何前缀 + `itunes.apple.com` 都走直连。沿 `skill/SKILL.md` 的手工域名流程执行：

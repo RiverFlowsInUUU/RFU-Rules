@@ -1,8 +1,6 @@
-# 上游源文件的临时下载目录 —— 由使用者/CI 按需取用，不入库。
-# 取法与用途见 skill/SKILL.md「完整生成」节；CI 在每次运行时下载（见 .github/workflows/ci.yml）。
-# ⚠️ 不入库是有意的：上游每周漂，把快照提交进来会让人误以为「仓库内的源就是权威」，
-#    而本仓的定位是**格式转换镜像**（产物才是交付物），源的权威永远在上游。
-jinx-rules/
+# ── 上游快照是「入库」的，别把 upstream/ 加进来 ──────────────────────
+# 2026-10-27 起本仓不再跟随上游：六个源全部冻结在 upstream/（带 manifest.json
+# 的 sha256 清单），构建只读本目录、不联网。入库存疑请看 upstream/MANIFEST.md。
 
 # Python 字节码缓存（脚本以 python xxx.py 直接执行，无需提交编译产物）
 __pycache__/
@@ -12,5 +10,5 @@ __pycache__/
 out/
 _regen/
 
-# cn-adblock 构建器的源快照目录（可复现用，不入库；与 jinx-rules/ 同一思路）
-test/_src/
+# build_ads.py 的落脚点（三支路合成的中间结果；交付物是仓库根的六份产物）
+build/

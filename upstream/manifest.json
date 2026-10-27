@@ -1,0 +1,115 @@
+{
+  "frozen_at": "2026-10-27T03:54:41+00:00",
+  "policy": "上游一律冻结，构建只读 upstream/，不联网。要更新跑 skill/scripts/freeze_upstream.py。",
+  "jinx_commit": "c85751d",
+  "sources": [
+    {
+      "group": "jinx-3.2.3",
+      "path": "jinx-3.2.3/blacklist.txt",
+      "url": "https://raw.githubusercontent.com/VME98/jinx-rules/c85751d/rules/blacklist.txt",
+      "sha256": "adcf99b214dd1a50c8d1fa225cbb72f64f098c7b31e11dea8b79eebcea984e61",
+      "bytes": 71283,
+      "lines": 3726,
+      "note": "上游黑名单（后缀语义）"
+    },
+    {
+      "group": "jinx-3.2.3",
+      "path": "jinx-3.2.3/blacklist_wildcard.txt",
+      "url": "https://raw.githubusercontent.com/VME98/jinx-rules/c85751d/rules/blacklist_wildcard.txt",
+      "sha256": "63d63c644e5670f004a5698f7e10102cc75db17531f9546d9c776a7969ef3621",
+      "bytes": 4582,
+      "lines": 264,
+      "note": "上游黑名单通配"
+    },
+    {
+      "group": "jinx-3.2.3",
+      "path": "jinx-3.2.3/whitelist.txt",
+      "url": "https://raw.githubusercontent.com/VME98/jinx-rules/c85751d/rules/whitelist.txt",
+      "sha256": "6d13c59c5bb8c78d981f7074cb08d9206164a6463c50b04ab80fa6c8ea8dfeb0",
+      "bytes": 5244,
+      "lines": 283,
+      "note": "上游白名单（精确语义）"
+    },
+    {
+      "group": "jinx-3.2.3",
+      "path": "jinx-3.2.3/whitelist_wildcard.txt",
+      "url": "https://raw.githubusercontent.com/VME98/jinx-rules/c85751d/rules/whitelist_wildcard.txt",
+      "sha256": "4b7c553997828301406e7025c5d78163395b788bf3cb43f31de019812501d5d4",
+      "bytes": 661,
+      "lines": 41,
+      "note": "上游白名单通配"
+    },
+    {
+      "group": "jinx-3.2.3",
+      "path": "jinx-3.2.3/version.json",
+      "url": "https://raw.githubusercontent.com/VME98/jinx-rules/c85751d/rules/version.json",
+      "sha256": "d9c20f057a4cae4dede7ca120167f0891c80411d0f9721163c5a7a60ad5b1725",
+      "bytes": 898,
+      "lines": 30,
+      "note": "上游版本自述"
+    },
+    {
+      "group": "217heidai",
+      "path": "217heidai/adblocksurgelite.list",
+      "url": "https://raw.githubusercontent.com/217heidai/adblockfilters/main/rules/adblocksurgelite.list",
+      "sha256": "54b46434e930529256eff1bf466fd6c410feff0bb1d3916ae717b1f74a0f8022",
+      "bytes": 162652,
+      "lines": 8480,
+      "note": "16 源聚合后 ∩ china.txt 的 lite 档（DOMAIN-SET 格式）"
+    },
+    {
+      "group": "217heidai",
+      "path": "217heidai/china.txt",
+      "url": "https://raw.githubusercontent.com/217heidai/adblockfilters/main/rules/china.txt",
+      "sha256": "23a1d548beb9e2422cef65f078007acfe9e079cae00c4c7459c38d0c776d36aa",
+      "bytes": 207809,
+      "lines": 12143,
+      "note": "中国域名清单（判定「中国生态」的基准）"
+    },
+    {
+      "group": "cn",
+      "path": "cn/AdGuard_Chinese_filter.txt",
+      "url": "https://raw.githubusercontent.com/217heidai/adblockfilters/main/rules/AdGuard_Chinese_filter.txt",
+      "sha256": "ee6ab97f420551ca382f8b7457e21411fe301250a9d6871ae61057038052b57b",
+      "bytes": 754584,
+      "lines": 21095,
+      "note": "AdGuard 官方中文过滤器"
+    },
+    {
+      "group": "cn",
+      "path": "cn/AWAvenue_Ads_Rule.txt",
+      "url": "https://raw.githubusercontent.com/217heidai/adblockfilters/main/rules/AWAvenue_Ads_Rule.txt",
+      "sha256": "fdf930d67659f6f1405c81e67c1fb7797145c54296c5ba0398729aa4d846808c",
+      "bytes": 23470,
+      "lines": 984,
+      "note": "秋风广告规则"
+    },
+    {
+      "group": "cn",
+      "path": "cn/jiekouAD.txt",
+      "url": "https://raw.githubusercontent.com/217heidai/adblockfilters/main/rules/jiekouAD.txt",
+      "sha256": "f5ff18cab4bddbf5efe549f77ee7f15b85938e7e282c1e7be2a0ff37b34f3f64",
+      "bytes": 129121,
+      "lines": 5375,
+      "note": "接口广告源（灰产长尾多，靠准入规则滤）"
+    },
+    {
+      "group": "cn",
+      "path": "cn/CJX_Annoyance_List.txt",
+      "url": "https://raw.githubusercontent.com/217heidai/adblockfilters/main/rules/CJX's_Annoyance_List.txt",
+      "sha256": "f5afcf694eb62c42bdaa1294915f10a78577d1005c8d7a13b61a4808ccddb528",
+      "bytes": 57229,
+      "lines": 1840,
+      "note": "CJX 中文骚扰+广告"
+    },
+    {
+      "group": "cn",
+      "path": "cn/xinggsf_mv.txt",
+      "url": "https://raw.githubusercontent.com/217heidai/adblockfilters/main/rules/xinggsf_mv.txt",
+      "sha256": "1165b91dd489b438c1d99de65c259d15cf5c406b2d8bfcebdb3aa794f129ebf8",
+      "bytes": 6533,
+      "lines": 160,
+      "note": "xinggsf（优酷等）"
+    }
+  ]
+}

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""verify_jinx_src.py 的负样本自测 —— 证明闸门真能抓错，不是空转。
+"""verify_products.py 的负样本自测 —— 证明闸门真能抓错，不是空转。
 
 **为什么必须有这个文件**：一个只会全绿的闸门与没有闸门等价。本仓
 `skill/SKILL.md` 记录过一次真实事故：某个检查「两半都恒空/恒 0」，
 长期以绿形态存在，实际什么都没验 —— 被称为「永远绿的空操作」。
 本脚本就是防这类退化的：它在临时副本仓里逐一制造典型错误，
-要求 `verify_jinx_src.py` **判负**且命中预期分段。任何一种错误没被抓到，
+要求 `verify_products.py` **判负**且命中预期分段。任何一种错误没被抓到，
 本脚本即判负 —— 提示闸门出现了漏报。
 
 退出码：0=全部抓到 / 1=有漏报（闸门不可信）。
@@ -32,7 +32,7 @@ for _s in ('stdout', 'stderr'):
             pass
 
 ROOT = Path(__file__).resolve().parents[2]
-TARGET = ROOT / 'skill' / 'tests' / 'verify_jinx_src.py'
+TARGET = ROOT / 'skill' / 'tests' / 'verify_products.py'
 
 CASES = []
 
@@ -82,7 +82,7 @@ def _(w):
 def _(w):
     """把订阅表里某个文件的条数改错。
 
-    兼容两种合法表格形态（见 verify_jinx_src.py 第 5 段）：
+    兼容两种合法表格形态（见 verify_products.py 第 5 段）：
       A 独立单元格： | `f` | 47 |
       B 内嵌链接：   [`f`](URL) `47`
     两种都试，确保本负样本在版式演进后依然有效。
@@ -94,14 +94,16 @@ def _(w):
     p = w / 'README.md'
     t = p.read_text(encoding='utf-8')
     pats = [
-        r'(\[`surge-direct\.list`\]\(https://raw\.githubusercontent\.com/'
-        r'RiverFlowsInUUU/Jinx/main/surge-direct\.list\)\s*`)\d+(`)',
-        r'(\| `surge-direct\.list` \| )\d+( \|)',
+        (r'(\[`surge-direct\.list`\]\(https://raw\.githubusercontent\.com/'
+         r'RiverFlowsInUUU/RFU-Rules/main/surge-direct\.list\)\s*`)'
+         r'(\d+)(`)'),
+        (r'(\| `surge-direct\.list` \| )(\d+)( \|)'),
     ]
     for pat in pats:
         m = re.search(pat, t)
         if m:
-            t = t[:m.start(2)] + '50' + t[m.end(2):]
+            want = str(int(m.group(2)) + 7)      # 改成任意一个不等于实际的数
+            t = t[:m.start(2)] + want + t[m.end(2):]
             break
     else:
         raise AssertionError('负样本失效：README 订阅表两种形态都没匹配到')
@@ -171,9 +173,9 @@ def _(w):
     """
     p = w / 'DetailsReadme' / 'DetailsReadme.md'
     t = p.read_text(encoding='utf-8')
-    old = '| 上游写法 | 含义 | mihomo | Surge | Egern | sing-box |'
+    old = '| 产物侧写法 | 含义 | mihomo | Surge | Egern | sing-box |'
     assert old in t, '负样本失效：转换原理表头已改版（平台列可能又变了）'
-    p.write_text(t.replace(old, '| 上游写法 | 含义 | mihomo | Surge | Egern |', 1),
+    p.write_text(t.replace(old, '| 产物侧写法 | 含义 | mihomo | Surge | Egern |', 1),
                  encoding='utf-8')
 
 
@@ -213,14 +215,14 @@ def _(w):
 
     故 expect 取第 6 段失败时才出现的文案，不取段标题。
     """
-    src = w / 'jinx-rules' / 'blacklist.txt'
-    assert src.is_file(), '负样本失效：临时仓里没有 jinx-rules/，无法制造半同步'
+    src = w / 'upstream' / 'jinx-3.2.3' / 'blacklist.txt'
+    assert src.is_file(), '负样本失效：临时仓里没有 upstream/jinx-3.2.3/，无法制造半同步'
     src.write_text(src.read_text(encoding='utf-8') + 'selftest-half-sync.example.com\n',
                    encoding='utf-8')
 
 
 @case('文档版本号漂移：README 徽章写回旧上游版本（第 5b 段）',
-      '声明 0.0.0 != 上游实际')
+      '声明 0.0.0 != 冻结快照')
 def _(w):
     """把 README 的 Source 徽章改成一个不是当前上游的版本号。
 
@@ -236,7 +238,7 @@ def _(w):
     import re
     p = w / 'README.md'
     t = p.read_text(encoding='utf-8')
-    ver = json.loads((w / 'jinx-rules' / 'version.json').read_text(
+    ver = json.loads((w / 'upstream' / 'jinx-3.2.3' / 'version.json').read_text(
         encoding='utf-8'))['version']
     pat = r'badge/Source-Jinx%20' + re.escape(ver)
     assert re.search(pat, t), '负样本失效：README Source 徽章里没有当前上游版本号'
@@ -250,7 +252,7 @@ def _(w):
     """只改动 version.json 的自述计数，让它与源文件实际对不上。
 
     这是**只有 6b 段能抓到**的一类错误（6 段的独立性反证就靠本样本）：
-    它模拟的是「本地 jinx-rules/ 不是一份完整/可信任的上游快照」——
+    它模拟的是「本地 upstream/ 不是一份完整/可信任的上游快照」——
     比如手工裁过、只取到半个快照、或混入了上一个版本的残留文件。
 
     此时产物与源彼此“自洽”，第 6 段重跑可以全绿，但**两个东西都不可信**；
@@ -264,7 +266,7 @@ def _(w):
     两边同时 +1 又变得相等，样本静默变成空操作（漏报）。现在改为**从副本仓
     实际数出条数再 +1**，无论副本仓是什么状态都保证分歧存在。
     """
-    src = w / 'jinx-rules'
+    src = w / 'upstream' / 'jinx-3.2.3'
     actual = sum(1 for line in (src / 'blacklist.txt').read_text(encoding='utf-8').splitlines()
                  if line.strip() and not line.strip().startswith('#'))
     actual += sum(1 for line in (src / 'blacklist_wildcard.txt').read_text(encoding='utf-8').splitlines()
@@ -275,6 +277,22 @@ def _(w):
     p.write_text(json.dumps(d, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 
 
+@case('手改冻结上游：往 upstream/ 加一行，不动 manifest（第 6b 段 sha256）', '被改动')
+def _(w):
+    """往 upstream/jinx-3.2.3/blacklist.txt 追加一条，但不更新 manifest.json。
+
+    这是 2026-10-27 新增的守卫：手改上游等于悄悄换掉合并基线，而第 6 段
+    只会照着被改过的源重跑、照样全绿 —— 只有 sha256 校验能发现它。
+    """
+    src = w / 'upstream' / '217heidai' / 'china.txt'
+    assert src.is_file(), '负样本失效：临时仓里没有 upstream/217heidai/china.txt'
+    # 选 china.txt 是为了**独立性**：它只参与覆盖率参考播报，不进产物 ——
+    # 于是本样本只触发 sha256 判据，不会顺带把第 6 段也弄红，
+    # 从而真正证明「6b 的 sha 校验」是一盘独立的守卫。
+    src.write_text(src.read_text(encoding='utf-8') + 'selftest-drift.example.cn\n',
+                   encoding='utf-8')
+
+
 def main():
     if not TARGET.is_file():
         print(f'❌ 前置不达标：找不到 {TARGET}')
@@ -283,7 +301,7 @@ def main():
 
     # 前置：副本仓本身必须先跑绿。负样本自测是**相对**断言 ——
     # 它验证的是「破坏 O 后闸门能抓到」，前提是「不破坏时闸门是绿的」。
-    # 若工作区已经处于脏状态（例如调试时往 jinx-rules/ 追加了一行），
+    # 若工作区已经处于脏状态（例如调试时往 upstream/ 追加了一行），
     # 每条负样本都会在“已经红”的底子上运行，结果既可能假绿也可能假红，
     # 自测结论完全不可信。2026-10-10 演练时就撞上过这个陷阱。
     # 宁可拒绝出结论（退出码 2），也不给一个看似跑过的假绿。
@@ -296,7 +314,7 @@ def main():
         if proc.returncode != 0:
             print(f'❌ 前置不达标：副本仓本身就没跑绿（exit={proc.returncode}），'
                   '负样本自测在非绿基线上无意义。')
-            print('   先让 `python skill/tests/verify_jinx_src.py` 在仓根回到 0，再跑本自测。')
+            print('   先让 `python skill/tests/verify_products.py` 在仓根回到 0，再跑本自测。')
             tail = [l for l in (proc.stdout or '').splitlines() if '❌' in l][:5]
             for l in tail:
                 print('   ' + l.strip())
@@ -307,7 +325,7 @@ def main():
     for label, expect, sabotage in CASES:
         with tempfile.TemporaryDirectory() as tmp:
             work = Path(tmp) / 'repo'
-            # jinx-rules/ 也要复制：第 5b / 6b 段要读它断言「合并基线 == 上游最新」。
+            # upstream/ 也要复制：第 5b / 6b 段要读它断言「冻结快照完整且未被手改」。
             # 若在这里排除它，两道新断言会因「缺源文件」对所有负样本一律判负，
             # 于是每条负样本都能“抓到”，自测就不再能区分真假 —— 等于自测空转。
             shutil.copytree(ROOT, work,
@@ -334,7 +352,7 @@ def main():
 
     print(f'\n负样本结果: {caught} 抓到, {missed} 漏报')
     if missed:
-        print('⚠️  存在漏报 —— 闸门的判据有盲区，不可信。请修 verify_jinx_src.py。')
+        print('⚠️  存在漏报 —— 闸门的判据有盲区，不可信。请修 verify_products.py。')
         return 1
     print('✅ 全部典型错误都能被判负 —— 闸门不是空转。')
     return 0

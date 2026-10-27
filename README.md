@@ -1,10 +1,10 @@
 <div align="center">
 
-# 🛑 Jinx 去广告规则
+# 🛑 RFU 去广告规则
 
-**iOS 拦得住的广告，mihomo / Surge / Egern / sing-box 也拦得住**
+**广告 · 统计 · 隐私采集 · PCDN —— 四端同一份，逐条等价**
 
-上游 Jinx 黑/白名单的格式转换 · 规则一条不增不减
+三支路合成 · 冻结上游 · 离线可复现
 
 [![Source](https://img.shields.io/badge/Source-Jinx%203.2.3-8250df?style=flat-square)](https://github.com/VME98/jinx-rules)
 [![License](https://img.shields.io/badge/License-%E6%9C%AA%E5%A3%B0%E6%98%8E-critical?style=flat-square)](#-来源与许可)
@@ -13,22 +13,21 @@
 [![Surge](https://img.shields.io/badge/Surge-RULE--SET-orange?style=flat-square)](#-接入)
 [![Egern](https://img.shields.io/badge/Egern-%E5%A4%8D%E7%94%A8%20Surge%20%E6%A0%BC%E5%BC%8F-8957e5?style=flat-square)](#-接入)
 [![sing-box](https://img.shields.io/badge/sing--box-source%20JSON-blue?style=flat-square)](#-接入)
-[![CI](https://github.com/RiverFlowsInUUU/Jinx/actions/workflows/ci.yml/badge.svg)](https://github.com/RiverFlowsInUUU/Jinx/actions/workflows/ci.yml)
+[![CI](https://github.com/RiverFlowsInUUU/RFU-Rules/actions/workflows/ci.yml/badge.svg)](https://github.com/RiverFlowsInUUU/RFU-Rules/actions/workflows/ci.yml)
 
-[![Ads](https://img.shields.io/badge/%E6%8B%A6%E6%88%AA-3991%20%E6%9D%A1-0969da?style=flat-square)](#-订阅)
-[![White](https://img.shields.io/badge/%E6%94%BE%E8%A1%8C-48%20%E6%9D%A1-2da44e?style=flat-square)](#-订阅)
-[![AWAvenue](https://img.shields.io/badge/%E7%A7%8B%E9%A3%8E-965%20%E6%9D%A1-f9c513?style=flat-square)](#-订阅)
+[![Ads](https://img.shields.io/badge/%E6%8B%A6%E6%88%AA-9534%20%E6%9D%A1-0969da?style=flat-square)](#-订阅)
+[![White](https://img.shields.io/badge/%E6%94%BE%E8%A1%8C-49%20%E6%9D%A1-2da44e?style=flat-square)](#-订阅)
 
 </div>
 
-> 🤖 **AI agent 请从这里开始** → [`skill/SKILL.md`](skill/SKILL.md)：改完必跑的那一条命令，和六条不要越的线。
+> 🤖 **AI agent 请从这里开始** → [`skill/SKILL.md`](skill/SKILL.md)：构建链、断言口径，和七条不要越的线。
 
 ## 🧭 目录
 
 - [📥 订阅](#-订阅)
-  - [🧱 Jinx 规则集](#-jinx-规则集)
-  - [🤝 AWAvenue 秋风广告规则](#-awavenue-秋风广告规则)
-- [🧬 一条不差 · 四端同源](#-一条不差--四端同源)
+  - [🧱 本仓规则集](#-本仓规则集)
+  - [🍂 搭配 AWAvenue（可选）](#-搭配-awavenue可选)
+- [🧬 四端同源](#-四端同源)
 - [🔌 接入](#-接入)
 - [📋 规则顺序](#-规则顺序)
 - [🚧 OpenClash](#-openclash)
@@ -37,22 +36,43 @@
 
 ## 📥 订阅
 
-### 🧱 Jinx 规则集
+### 🧱 本仓规则集
 
 🔗 文件名即订阅地址 —— 右键「复制链接地址」即可取用。
 
 | <div align="center">客户端</div> | <div align="center">🚫 拦截规则集</div> | <div align="center">✅ 放行规则集</div> |
 |:--|:--|:--|
-| **mihomo** / OpenClash | [`mihomo-ads.yaml`](https://raw.githubusercontent.com/RiverFlowsInUUU/Jinx/main/mihomo-ads.yaml) `3991` | [`mihomo-direct.yaml`](https://raw.githubusercontent.com/RiverFlowsInUUU/Jinx/main/mihomo-direct.yaml) `48` |
-| **Surge** / **Egern** | [`surge-ads.list`](https://raw.githubusercontent.com/RiverFlowsInUUU/Jinx/main/surge-ads.list) `3991` | [`surge-direct.list`](https://raw.githubusercontent.com/RiverFlowsInUUU/Jinx/main/surge-direct.list) `48` |
-| **sing-box** | [`sing-box-ads.json`](https://raw.githubusercontent.com/RiverFlowsInUUU/Jinx/main/sing-box-ads.json) `3991` | [`sing-box-direct.json`](https://raw.githubusercontent.com/RiverFlowsInUUU/Jinx/main/sing-box-direct.json) `48` |
+| **mihomo** / OpenClash | [`mihomo-ads.yaml`](https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/mihomo-ads.yaml) `9534` | [`mihomo-direct.yaml`](https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/mihomo-direct.yaml) `49` |
+| **Surge** / **Egern** | [`surge-ads.list`](https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/surge-ads.list) `9534` | [`surge-direct.list`](https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/surge-direct.list) `49` |
+| **sing-box** | [`sing-box-ads.json`](https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/sing-box-ads.json) `9534` | [`sing-box-direct.json`](https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/sing-box-direct.json) `49` |
 
-📌 表内链接指向 **Raw GitHub**（首选源）。要换成 jsDelivr 备用源，把
-`raw.githubusercontent.com/RiverFlowsInUUU/Jinx/main/` 换成 `cdn.jsdelivr.net/gh/RiverFlowsInUUU/Jinx@main/` 即可。
+📌 首选 **Raw GitHub**，每行一个完整地址：
 
-### 🤝 AWAvenue 秋风广告规则
+```
+https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/mihomo-ads.yaml
+https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/mihomo-direct.yaml
+https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/surge-ads.list
+https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/surge-direct.list
+https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/sing-box-ads.json
+https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/sing-box-direct.json
+```
 
-🍂 第三方规则，官方直链，可叠加；上游每日更新，条数以官方文件头为准。
+🔁 备用 **jsDelivr**，路径不变，只换前缀：
+
+```
+https://cdn.jsdelivr.net/gh/RiverFlowsInUUU/RFU-Rules@main/mihomo-ads.yaml
+https://cdn.jsdelivr.net/gh/RiverFlowsInUUU/RFU-Rules@main/mihomo-direct.yaml
+https://cdn.jsdelivr.net/gh/RiverFlowsInUUU/RFU-Rules@main/surge-ads.list
+https://cdn.jsdelivr.net/gh/RiverFlowsInUUU/RFU-Rules@main/surge-direct.list
+https://cdn.jsdelivr.net/gh/RiverFlowsInUUU/RFU-Rules@main/sing-box-ads.json
+https://cdn.jsdelivr.net/gh/RiverFlowsInUUU/RFU-Rules@main/sing-box-direct.json
+```
+
+### 🍂 搭配 AWAvenue（可选）
+
+📦 **不是必须** —— 本仓拦截集已内含秋风规则的绝大部分（969 条中已收 912 条）。
+
+只有想要「秋风全量」时才额外叠加，代价是多几百条重复（重复对结果是 REJECT，无副作用）。
 
 | <div align="center">客户端</div> | <div align="center">🚫 拦截规则集</div> |
 |:--|:--|
@@ -60,27 +80,27 @@
 | **Surge** | [`AWAvenue-Ads-Rule-Surge-RULE-SET.list`](https://raw.githubusercontent.com/TG-Twilight/AWAvenue-Ads-Rule/main/Filters/AWAvenue-Ads-Rule-Surge-RULE-SET.list) `965` |
 | **sing-box** | [`AWAvenue-Ads-Rule-Singbox.json`](https://raw.githubusercontent.com/TG-Twilight/AWAvenue-Ads-Rule/main/Filters/AWAvenue-Ads-Rule-Singbox.json) `965` |
 
-> [!WARNING]
-> 判定标准与 Jinx 不同 —— 会拦掉 Jinx 白名单里的 8 个域。叠加时把秋风排在 Jinx **之后**。
-
-💡 sing-box 版是官方自己的 rule-set source 格式，`format: "source"` 直接挂，无需本地编译；条数与字段构成见 [`DetailsReadme/DetailsReadme.md`](DetailsReadme/DetailsReadme.md) 第 3 章。
+> [!NOTE]
+> 第三方规则由对方托管，只给官方 Raw 地址，不列备用镜像 —— 缓存我们 purge 不了，多列一个源等于把对方的缓存层写进本文档。
 
 ---
 
-## 🧬 一条不差 · 四端同源
+## 🧬 四端同源
 
-🔬 不是"抄了一份列表"，是**同一批规则换个写法的镜像** —— 各端逐条等价，由 CI 每次提交对拍。
+🔬 不是「抄了一份列表」，是**同一批域名换个写法的镜像** —— 各端逐条等价，由 CI 每次提交对拍。
 
-| <div align="center">维度</div> | <div align="center">Jinx 规则集</div> | <div align="center">说明</div> |
+| <div align="center">维度</div> | <div align="center">本仓规则集</div> | <div align="center">说明</div> |
 |:--|:--|:--|
-| 🚫 拦截 | **3991 条** | 3833 条域名后缀 + 158 条中缀通配 |
-| ✅ 放行 | **48 条** | 43 条精确 + 5 条后缀（含 4 条手工补充） |
+| 🚫 拦截 | **9534 条** | 全部 `DOMAIN-SUFFIX`，零通配、零正则 |
+| ✅ 放行 | **49 条** | 43 条精确 + 6 条后缀（含 5 条手工补充） |
 | 🧩 各端一致 | **逐条等价** | mihomo / Surge / Egern / sing-box 归一化后零差异 |
-| 🎯 增删 | **一条不增不减** | 只做格式转换，不改上游判定 |
-| 🔄 可复现 | **逐字节一致** | 产物 == 源头重跑结果，CI 对拍 |
-| 📌 上游快照 | `3.2.3` · `2026-10-18` | 上游更新后需重跑生成 |
+| 🎯 生成物 | **逐字节可复现** | 产物 == 生成链重跑结果，CI 对拍 |
+| 🔄 上游 | **冻结** | 六个源全部落盘在 `upstream/`，构建不联网 |
+| 📌 上游快照 | 冻结于 `3.2.3` · `2026-10-18` | 不再跟随上游滚动 |
 
-🚫 **只做减法不做加法**：本仓不替你判断"哪些广告该拦"，上游收录什么就转什么。唯一例外是 `custom-*.list` 里人工补充的域名，每一条都写明依据。
+🎯 **只拦四类**：广告、统计、隐私采集、PCDN。赌博与色情灰产**不进本仓规则集** —— 它靠「归属域成簇或名称含语义」的准入判据在构建阶段被结构性地排除，不靠人工逐条挑选。
+
+🚫 **只拦域名，不拦 IP**：IPv4 与 CIDR 在提取阶段就被剔除，四端的规则语义因此完全一致。
 
 ---
 
@@ -93,31 +113,31 @@
 
 ```yaml
 rule-providers:
-  jinx-ads:
+  rfu-ads:
     type: http
-    behavior: classical          # 不用 domain
+    behavior: classical          # 不用 domain：文件是逐条规则，不是纯域名列表
     format: yaml                 # 文件是顶层 payload 列表
-    url: "https://raw.githubusercontent.com/RiverFlowsInUUU/Jinx/main/mihomo-ads.yaml"
-    path: ./rule_provider/jinx-ads.yaml
-    interval: 86400
+    url: "https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/mihomo-ads.yaml"
+    path: ./rule_provider/rfu-ads.yaml
+    interval: 604800
 
-  jinx-direct:
+  rfu-direct:
     type: http
     behavior: classical
     format: yaml
-    url: "https://raw.githubusercontent.com/RiverFlowsInUUU/Jinx/main/mihomo-direct.yaml"
-    path: ./rule_provider/jinx-direct.yaml
-    interval: 86400
+    url: "https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/mihomo-direct.yaml"
+    path: ./rule_provider/rfu-direct.yaml
+    interval: 604800
 
 rules:
-  - RULE-SET,jinx-direct,DIRECT
-  - RULE-SET,jinx-ads,REJECT
+  - RULE-SET,rfu-direct,DIRECT
+  - RULE-SET,rfu-ads,REJECT
   # 其余规则接在后面
 ```
 
-💡 `behavior: classical` 不能改成 `domain` —— 文件是逐条规则，不是域名集合。
+💡 `interval` 写成一周即可 —— 上游已冻结，本仓不会自己变；真要跟进新版，是我们这边重跑发布。
 
-💡 `format: yaml` 与 `.yaml` 后缀配套（mihomo 的缺省格式，显式写出防抄错）。
+💡 产物已不含任何 `DOMAIN-REGEX` / `DOMAIN-WILDCARD`，`classical` 里只剩后缀一种匹配类型 —— 最贵的那类逐条正则扫描不会发生。
 
 </details>
 
@@ -127,13 +147,16 @@ rules:
 ```
 [Rule]
 # 白名单（精确放行）
-RULE-SET,https://raw.githubusercontent.com/RiverFlowsInUUU/Jinx/main/surge-direct.list,DIRECT
+RULE-SET,https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/surge-direct.list,DIRECT,extended-matching
 # 广告拦截
-RULE-SET,https://raw.githubusercontent.com/RiverFlowsInUUU/Jinx/main/surge-ads.list,REJECT,pre-matching,extended-matching
+RULE-SET,https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/surge-ads.list,REJECT,extended-matching
 # 其余规则接在后面
 ```
 
-💡 `pre-matching` 把 REJECT 提前到 DNS / 连接建立阶段，`extended-matching` 按 TLS SNI / HTTP Host 额外匹配，处理 App 直连 IP 的情况 —— 两者都只对 REJECT 系策略生效，白名单行不加。
+💡 `extended-matching` 让规则在 App 直连 IP 时按 TLS SNI / HTTP Host 兜底匹配 —— 缺了它，域名规则会大批失效。
+
+> [!WARNING]
+> 不要给拦截行加 `pre-matching`。它会把 REJECT 抽到**所有规则之前**评估，白名单那行永远轮不到 —— 表现是推送收不到、微信登录转圈。
 
 </details>
 
@@ -146,13 +169,13 @@ RULE-SET,https://raw.githubusercontent.com/RiverFlowsInUUU/Jinx/main/surge-ads.l
 # ① 连接阶段：走规则匹配（白名单在前、拦截在后）
 rules:
 - rule_set:
-    name: Jinx-CN
-    match: https://raw.githubusercontent.com/RiverFlowsInUUU/Jinx/main/surge-direct.list
+    name: RFU-Direct
+    match: https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/surge-direct.list
     policy: DIRECT
     update_interval: 604800
 - rule_set:
-    name: Jinx-Ads
-    match: https://raw.githubusercontent.com/RiverFlowsInUUU/Jinx/main/surge-ads.list
+    name: RFU-Ads
+    match: https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/surge-ads.list
     policy: AD
     update_interval: 604800
     # 其余规则接在后面
@@ -162,10 +185,10 @@ rules:
 # ② DNS 阶段：防泄露的一环（可选，但推荐 —— 广告域在解析阶段就拒答）
 forward:
 - proxy_rule_set:
-    match: https://raw.githubusercontent.com/RiverFlowsInUUU/Jinx/main/surge-direct.list
+    match: https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/surge-direct.list
     value: Domestic-DNS
 - proxy_rule_set:
-    match: https://raw.githubusercontent.com/RiverFlowsInUUU/Jinx/main/surge-ads.list
+    match: https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/surge-ads.list
     value: reject
 - domain_wildcard: '*'          # 兜底必须指向「代理没起来时也能用」的加密组
   value: Domestic-DNS
@@ -188,22 +211,22 @@ forward:
     "rule_set": [
       {
         "type": "remote",
-        "tag": "jinx-direct",
+        "tag": "rfu-direct",
         "format": "source",
-        "url": "https://raw.githubusercontent.com/RiverFlowsInUUU/Jinx/main/sing-box-direct.json",
-        "update_interval": "1d"
+        "url": "https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/sing-box-direct.json",
+        "update_interval": "7d"
       },
       {
         "type": "remote",
-        "tag": "jinx-ads",
+        "tag": "rfu-ads",
         "format": "source",
-        "url": "https://raw.githubusercontent.com/RiverFlowsInUUU/Jinx/main/sing-box-ads.json",
-        "update_interval": "1d"
+        "url": "https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/sing-box-ads.json",
+        "update_interval": "7d"
       }
     ],
     "rules": [
-      { "rule_set": ["jinx-direct"], "outbound": "direct" },
-      { "rule_set": ["jinx-ads"], "action": "reject" }
+      { "rule_set": ["rfu-direct"], "outbound": "direct" },
+      { "rule_set": ["rfu-ads"], "action": "reject" }
     ]
   }
 }
@@ -231,6 +254,9 @@ forward:
 
 > [!WARNING]
 > 国内广告域名多数同时属于「中国大陆域名」—— `GEOSITE,cn` 若排到 `REJECT` 之前会先命中放行，广告规则再没有机会执行。
+
+> [!IMPORTANT]
+> 白名单必须排在拦截之前，而且**不能因为「拦截集里也有这个域」就把白名单那行删掉**。拦截集里有 `umeng.com`、`tanx.com`、`getui.net` 这类平台主域，覆盖了放行清单里的功能子域；靠的就是更具体的规则先命中 DIRECT。顺序颠倒 = 推送和登录直接失效。
 
 ---
 
@@ -262,11 +288,12 @@ uci commit openclash
 
 | <div align="center">文档</div> | <div align="center">内容</div> |
 |:-----|:-----|
-| 📘 [`DetailsReadme/DetailsReadme.md`](DetailsReadme/DetailsReadme.md) | 白名单来源 · 两个源的缓存与生效判据 · 秋风对比 · 转换原理 · OpenClash 细节 |
-| 🧪 [`skill/SKILL.md`](skill/SKILL.md) | 匹配语义判定 · 通配映射 · 白名单瘦身 · 生成命令 · 验收闸门 |
+| 📘 [`DetailsReadme/DetailsReadme.md`](DetailsReadme/DetailsReadme.md) | 三支路来源与取舍 · 缓存与生效判据 · 转换原理 · OpenClash 细节 · 一致性保证 |
+| 🧪 [`skill/SKILL.md`](skill/SKILL.md) | 匹配语义判定 · 通配映射 · 加新源的方法 · 断言口径 · 七条不要越的线 |
+| 🧰 [`skill/scripts/`](skill/scripts/) | `freeze_upstream.py` / `build_ads.py` / `convert_ruleset.py` / `regen.sh` |
 | 📅 [`CHANGELOG.md`](CHANGELOG.md) | 规则变动记录 |
 
-🧷 六份文件同一次生成、内容等价，由 CI 每次提交自动校验（三格式逐条比对 + 条数声明 + 产物可复现），读数字不符会直接标红。
+🧷 六份文件同一次生成、内容等价，由 CI 每次提交自动校验（三格式逐条比对 + 条数声明 + 产物可复现 + 上游快照完整性），读数字不符会直接标红。
 
 ---
 
@@ -275,16 +302,17 @@ uci commit openclash
 | <div align="center">项</div> | <div align="center">说明</div> |
 |:--|:--|
 | 📄 上游 | [`VME98/jinx-rules`](https://github.com/VME98/jinx-rules) · 数据 `3.2.3` · `2026-10-18` |
-| 📜 许可 | 上游未声明（`license: null`），本仓亦不主张 |
-| 🧬 规则数据 | 版权归上游及其原始来源 |
-| 🧪 `skill/` | 转换脚本与方法论，不含上游数据，可自由取用 |
+| 🧩 其余来源 | `217heidai/adblockfilters` · AdGuard Chinese · 秋风 AWAvenue · CJX · xinggsf · jiekouAD |
+| 📜 许可 | 各上游均未声明，本仓亦不主张 |
+| 🧬 规则数据 | 版权归各上游及其原始来源 |
+| 🧪 `skill/` | 构建脚本与方法论，不含上游数据，可自由取用 |
 
-📮 上游权利人如有异议，开 issue 即下架。
+📮 上游已自 3.2.4 起转为加密发布，本仓以 3.2.3 明文快照为基线、**不再跟随**。任一上游作者如有异议，开 issue 即下架对应来源。
 
 ---
 
 <div align="center">
 
-📊 数据来自 VME98/jinx-rules
+📊 上游数据来自 VME98/jinx-rules 与 217heidai/adblockfilters
 
 </div>

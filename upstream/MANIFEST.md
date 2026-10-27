@@ -1,0 +1,65 @@
+# 📌 上游快照清单（冻结）
+
+> [!IMPORTANT]
+> 本目录是**构建输入**，不是产物。**不要手改这里的任何文件** ——
+> 手改会破坏「产物 == 源头重跑」的可复现断言（`verify_products.py` 会判负）。
+> 要更新上游，跑 `python skill/scripts/freeze_upstream.py`，让改动留在 git diff 里可审计。
+
+## 为什么冻结
+
+Jinx 上游自 `3.2.4` 起改为加密发布（`new-rules/*.enc`，需接收方 P-256 私钥），
+明文 `rules/` 停在 `3.2.3`。其余中文源若继续实时拉取，产物天天漂，
+`产物 == 源头重跑` 永远不成立，CI 也变成对着网络赌运气。
+
+故六个源一律落盘，构建只读本目录、**不联网**。
+
+## 冻结信息
+
+| 项 | 值 |
+|---|---|
+| 冻结时间（UTC） | `2026-10-27T03:54:41+00:00` |
+| Jinx 明文通道锚点 | `VME98/jinx-rules@c85751d`（对应版本见 `jinx-3.2.3/version.json`） |
+| 源文件数 | 12 |
+
+## 文件明细
+
+| 分组 | 文件 | 字节 | 非注释行 | sha256 前 12 位 | 用途 |
+|---|---|---|---|---|---|
+| jinx-3.2.3 | `blacklist.txt` | 71283 | 3726 | `adcf99b214dd` | 上游黑名单（后缀语义） |
+| jinx-3.2.3 | `blacklist_wildcard.txt` | 4582 | 264 | `63d63c644e56` | 上游黑名单通配 |
+| jinx-3.2.3 | `whitelist.txt` | 5244 | 283 | `6d13c59c5bb8` | 上游白名单（精确语义） |
+| jinx-3.2.3 | `whitelist_wildcard.txt` | 661 | 41 | `4b7c55399782` | 上游白名单通配 |
+| jinx-3.2.3 | `version.json` | 898 | 30 | `d9c20f057a4c` | 上游版本自述 |
+| 217heidai | `adblocksurgelite.list` | 162652 | 8480 | `54b46434e930` | 16 源聚合后 ∩ china.txt 的 lite 档（DOMAIN-SET 格式） |
+| 217heidai | `china.txt` | 207809 | 12143 | `23a1d548beb9` | 中国域名清单（判定「中国生态」的基准） |
+| cn | `AdGuard_Chinese_filter.txt` | 754584 | 21095 | `ee6ab97f4205` | AdGuard 官方中文过滤器 |
+| cn | `AWAvenue_Ads_Rule.txt` | 23470 | 984 | `fdf930d67659` | 秋风广告规则 |
+| cn | `jiekouAD.txt` | 129121 | 5375 | `f5ff18cab4bd` | 接口广告源（灰产长尾多，靠准入规则滤） |
+| cn | `CJX_Annoyance_List.txt` | 57229 | 1840 | `f5afcf694eb6` | CJX 中文骚扰+广告 |
+| cn | `xinggsf_mv.txt` | 6533 | 160 | `1165b91dd489` | xinggsf（优酷等） |
+
+## 取用方式
+
+构建产物（不联网，只读本目录）：
+
+```bash
+python skill/scripts/build_ads.py      # ads 域名集 → build/ads/ads-src.txt
+python skill/scripts/build_direct.py   # direct 域名集 → build/direct/direct-src.txt（可选，见该脚本说明）
+bash skill/scripts/regen.sh            # 上面两步 + convert_ruleset.py 产出六份产物
+```
+
+更新上游（唯一允许联网的入口）：
+
+```bash
+python skill/scripts/freeze_upstream.py --check   # 先确认当前快照未被手改
+python skill/scripts/freeze_upstream.py           # 抓取新版并更新本清单
+```
+
+## 来源与许可
+
+- **217heidai**：<https://raw.githubusercontent.com/217heidai/adblockfilters/main/rules>
+- **cn**：<https://raw.githubusercontent.com/217heidai/adblockfilters/main/rules>
+- **jinx-3.2.3**：<https://raw.githubusercontent.com/VME98/jinx-rules/c85751d/rules>
+
+上游均未声明开源许可。本仓只做格式转换与合并，不主张对规则数据的任何权利；
+任一上游作者提出异议即删除相关来源。

@@ -1,8 +1,8 @@
 # auto-converted by adblock-ruleset-port
-# source: ./jinx-rules
+# source: upstream/jinx-3.2.3
 # mode: exact
-# entries: 48
-# extra-white: custom-direct.list(4)
+# entries: 49
+# extra-white: custom-direct.list(5)
 DOMAIN,gm.mmstat.com
 DOMAIN,wgo.mmstat.com
 DOMAIN,zlink.ugsdk.cn
@@ -51,3 +51,4 @@ DOMAIN-SUFFIX,tange365.com
 DOMAIN-SUFFIX,wechatos.net
 DOMAIN-SUFFIX,za.group
 DOMAIN-SUFFIX,itunes.apple.com
+DOMAIN-SUFFIX,aspect-upush.umeng.com
