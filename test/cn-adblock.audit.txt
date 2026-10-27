@@ -4,15 +4,15 @@
 一、A 支路（lite）
   原始                           8480
   静态资源(剔除)                       60
-  功能域(剔除)                       572
-  灰产随机长尾(剔除)                   1935
+  功能域(剔除)                       349
+  灰产随机长尾(剔除)                   1934
 
 二、B 支路（5 源）
   [AWAvenue]
     其他(丢弃)                        4
     拦截 域名级(原始)                  969
-    准入后(采用)                     814
-    剔除                          155
+    准入后(采用)                     816
+    剔除                          153
   [CJX]
     条件/路径型拦截(不可表达)              604
     其他(丢弃)                       11
@@ -48,8 +48,8 @@
     条件/路径型拦截(不可表达)              456
     cosmetic(不可表达)              327
     拦截 域名级(原始)                 4508
-    准入后(采用)                     408
-    剔除                         4100
+    准入后(采用)                     409
+    剔除                         4099
 
 三、C 支路（Jinx 3.2.3）
   形态非法/IP(剔除)                     1
@@ -57,62 +57,64 @@
   原始                           3816
 
 四、漏斗
-  A 8480 | B 1390 | C 3816
+  A 8480 | B 1392 | C 3816
   合并去重                    : 11914
   @@ 例外减法（15 条规则）      : -5
   静态资源剔除                : -60
-  功能域剔除                  : -572
-  灰产随机长尾剔除            : -1935
-  语义上提后                  : 9310
-  jinx-direct 冲突剔除（上层域 34 个） : -34
-  最终产物                    : 9276
+  功能域剔除                  : -349
+  灰产随机长尾剔除            : -1934
+  语义上提后                  : 9534
+  最终产物                    : 9534
 
 五、覆盖率
-  【断言基线·独立】AWAvenue_Ads_Rule.txt 969 条 → 覆盖 875 条 = 90.3%（护栏 85%）
-  【参考】Jinx·中国生态 1511 条 → 覆盖 1382 条 = 91.5%
+  【断言基线·独立】AWAvenue_Ads_Rule.txt 969 条 → 覆盖 912 条 = 94.1%（护栏 85%）
+  【参考】Jinx·中国生态 1511 条 → 覆盖 1441 条 = 95.4%
 
-六、jinx-direct 冲突处理
-  apd-pcdnwxlogin.teg.tencent-cloud.net      ← 被上层域覆盖，已删除 ['apd-pcdnwxlogin.teg.tencent-cloud.net']
-  apd-pcdnwxnat.teg.tencent-cloud.net        ← 被上层域覆盖，已删除 ['apd-pcdnwxnat.teg.tencent-cloud.net']
-  apd-pcdnwxstat.teg.tencent-cloud.net       ← 被上层域覆盖，已删除 ['apd-pcdnwxstat.teg.tencent-cloud.net']
-  appcfg.v.qq.com                            ← 被上层域覆盖，已删除 ['appcfg.v.qq.com']
-  cactus.jd.com                              ← 被上层域覆盖，已删除 ['cactus.jd.com']
-  cl-m.i4.cn                                 ← 被上层域覆盖，已删除 ['cl-m.i4.cn']
-  dypnsapi.aliyuncs.com                      ← 被上层域覆盖，已删除 ['dypnsapi.aliyuncs.com']
-  effect.snssdk.com                          ← 被上层域覆盖，已删除 ['effect.snssdk.com']
-  gm.mmstat.com                              ← 被上层域覆盖，已删除 ['mmstat.com']
-  httpdns.meituan.com                        ← 被上层域覆盖，已删除 ['httpdns.meituan.com']
-  iuni.telecome.cn                           ← 被上层域覆盖，已删除 ['telecome.cn']
-  jpush.cn                                   ← 被上层域覆盖，已删除 ['jpush.cn']
-  license.vodglcdn.com                       ← 被上层域覆盖，已删除 ['license.vodglcdn.com']
-  list-app-m.i4.cn                           ← 被上层域覆盖，已删除 ['list-app-m.i4.cn']
-  m-cloud.zhihu.com                          ← 被上层域覆盖，已删除 ['m-cloud.zhihu.com']
-  mssdk.bytedance.com                        ← 被上层域覆盖，已删除 ['mssdk.bytedance.com']
-  mssdk.volces.com.queniusz.com              ← 被上层域覆盖，已删除 ['mssdk.volces.com.queniusz.com']
-  nbfriend-mtop.cainiao.com                  ← 被上层域覆盖，已删除 ['nbfriend-mtop.cainiao.com']
-  oneid.gepush.com                           ← 被上层域覆盖，已删除 ['gepush.com', 'oneid.gepush.com']
-  oneid.getui.net                            ← 被上层域覆盖，已删除 ['getui.net', 'oneid.getui.net']
-  pitaya.bytedance.com                       ← 被上层域覆盖，已删除 ['pitaya.bytedance.com']
-  praisewindow.ugsdk.cn                      ← 被上层域覆盖，已删除 ['ugsdk.cn']
-  pub-conf-m.i4.cn                           ← 被上层域覆盖，已删除 ['pub-conf-m.i4.cn']
-  s.jpush.cn                                 ← 被上层域覆盖，已删除 ['jpush.cn']
-  sdk.open.talk.gepush.com                   ← 被上层域覆盖，已删除 ['gepush.com']
-  sdk.open.talk.getui.net                    ← 被上层域覆盖，已删除 ['getui.net']
-  sdkapi.cloooud.com                         ← 被上层域覆盖，已删除 ['cloooud.com', 'sdkapi.cloooud.com']
-  seeds-sina.xycdn.com                       ← 被上层域覆盖，已删除 ['xycdn.com']
-  sis-ipv6.jpush.cn                          ← 被上层域覆盖，已删除 ['jpush.cn']
-  sis.jpush.io                               ← 被上层域覆盖，已删除 ['jpush.io', 'sis.jpush.io']
-  status-ipv6.jpush.cn                       ← 被上层域覆盖，已删除 ['jpush.cn']
-  tnc3-aliec2.snssdk.com                     ← 被上层域覆盖，已删除 ['tnc3-aliec2.snssdk.com']
-  tnc3-alisc1.snssdk.com                     ← 被上层域覆盖，已删除 ['tnc3-alisc1.snssdk.com']
-  tnc3-bjlgy.snssdk.com                      ← 被上层域覆盖，已删除 ['tnc3-bjlgy.snssdk.com']
-  tsis-ipv6.jpush.cn                         ← 被上层域覆盖，已删除 ['jpush.cn']
-  tsis.jpush.cn                              ← 被上层域覆盖，已删除 ['jpush.cn']
-  user-ipv6.jpush.cn                         ← 被上层域覆盖，已删除 ['jpush.cn']
-  user.jpush.cn                              ← 被上层域覆盖，已删除 ['jpush.cn']
-  wagbridge.alsc-prd.tanx.com                ← 被上层域覆盖，已删除 ['tanx.com']
-  wgo.mmstat.com                             ← 被上层域覆盖，已删除 ['mmstat.com']
-  zlink.ugsdk.cn                             ← 被上层域覆盖，已删除 ['ugsdk.cn']
+六、与 jinx-direct 放行清单的重叠（不删除，靠顺序保护）
+  以下 41 条 jinx-direct 条目会被产物的上层后缀覆盖：
+  ⚠️ 必须确保 jinx-direct 规则集排在拦截集**之前**，
+     否则这些功能域会被拦（推送/登录失效）。
+  apd-pcdnwxlogin.teg.tencent-cloud.net      ← 被 ['apd-pcdnwxlogin.teg.tencent-cloud.net'] 覆盖
+  apd-pcdnwxnat.teg.tencent-cloud.net        ← 被 ['apd-pcdnwxnat.teg.tencent-cloud.net'] 覆盖
+  apd-pcdnwxstat.teg.tencent-cloud.net       ← 被 ['apd-pcdnwxstat.teg.tencent-cloud.net'] 覆盖
+  appcfg.v.qq.com                            ← 被 ['appcfg.v.qq.com'] 覆盖
+  cactus.jd.com                              ← 被 ['cactus.jd.com'] 覆盖
+  cl-m.i4.cn                                 ← 被 ['cl-m.i4.cn'] 覆盖
+  dypnsapi.aliyuncs.com                      ← 被 ['dypnsapi.aliyuncs.com'] 覆盖
+  effect.snssdk.com                          ← 被 ['effect.snssdk.com'] 覆盖
+  gm.mmstat.com                              ← 被 ['mmstat.com'] 覆盖
+  httpdns.meituan.com                        ← 被 ['httpdns.meituan.com'] 覆盖
+  iuni.telecome.cn                           ← 被 ['telecome.cn'] 覆盖
+  jpush.cn                                   ← 被 ['jpush.cn'] 覆盖
+  license.vodglcdn.com                       ← 被 ['license.vodglcdn.com'] 覆盖
+  list-app-m.i4.cn                           ← 被 ['list-app-m.i4.cn'] 覆盖
+  m-cloud.zhihu.com                          ← 被 ['m-cloud.zhihu.com'] 覆盖
+  mssdk.bytedance.com                        ← 被 ['mssdk.bytedance.com'] 覆盖
+  mssdk.volces.com.queniusz.com              ← 被 ['mssdk.volces.com.queniusz.com'] 覆盖
+  nbfriend-mtop.cainiao.com                  ← 被 ['nbfriend-mtop.cainiao.com'] 覆盖
+  oneid.gepush.com                           ← 被 ['gepush.com', 'oneid.gepush.com'] 覆盖
+  oneid.getui.net                            ← 被 ['getui.net', 'oneid.getui.net'] 覆盖
+  pitaya.bytedance.com                       ← 被 ['pitaya.bytedance.com'] 覆盖
+  praisewindow.ugsdk.cn                      ← 被 ['ugsdk.cn'] 覆盖
+  pub-conf-m.i4.cn                           ← 被 ['pub-conf-m.i4.cn'] 覆盖
+  s.jpush.cn                                 ← 被 ['jpush.cn'] 覆盖
+  sdk.open.talk.gepush.com                   ← 被 ['gepush.com', 'sdk.open.talk.gepush.com'] 覆盖
+  sdk.open.talk.getui.net                    ← 被 ['getui.net', 'sdk.open.talk.getui.net'] 覆盖
+  sdkapi.cloooud.com                         ← 被 ['cloooud.com', 'sdkapi.cloooud.com'] 覆盖
+  seeds-sina.xycdn.com                       ← 被 ['xycdn.com'] 覆盖
+  sis-ipv6.jpush.cn                          ← 被 ['jpush.cn'] 覆盖
+  sis.jpush.io                               ← 被 ['jpush.io', 'sis.jpush.io'] 覆盖
+  status-ipv6.jpush.cn                       ← 被 ['jpush.cn'] 覆盖
+  tnc3-aliec2.snssdk.com                     ← 被 ['tnc3-aliec2.snssdk.com'] 覆盖
+  tnc3-alisc1.snssdk.com                     ← 被 ['tnc3-alisc1.snssdk.com'] 覆盖
+  tnc3-bjlgy.snssdk.com                      ← 被 ['tnc3-bjlgy.snssdk.com'] 覆盖
+  tsis-ipv6.jpush.cn                         ← 被 ['jpush.cn'] 覆盖
+  tsis.jpush.cn                              ← 被 ['jpush.cn'] 覆盖
+  user-ipv6.jpush.cn                         ← 被 ['jpush.cn'] 覆盖
+  user.jpush.cn                              ← 被 ['jpush.cn'] 覆盖
+  wagbridge.alsc-prd.tanx.com                ← 被 ['tanx.com'] 覆盖
+  wgo.mmstat.com                             ← 被 ['mmstat.com'] 覆盖
+  zlink.ugsdk.cn                             ← 被 ['ugsdk.cn'] 覆盖
 
 七、语义上提明细（118 条）
   adx-cn.ads.vungle.com                          -> ads.vungle.com
@@ -235,4 +237,4 @@
   zeus.ad.xiaomi.com                             -> ad.xiaomi.com
 
 八、断言
-  PASS 形态 / 静态资源 / 必需域 / jinx-direct 零覆盖 / 覆盖率 / 规模 / 无重复 —— 全部通过
+  PASS 形态 / 静态资源 / 必需域 / jinx-direct 非空 / 覆盖率 / 规模 / 无重复 —— 全部通过

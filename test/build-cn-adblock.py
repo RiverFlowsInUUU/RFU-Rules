@@ -95,7 +95,9 @@ SEMANTIC = {
 }
 PLATFORM_SUBSTR = (
     "kwai", "pangolin", "pangle", "gromore", "mobads", "alimama",
-    "bytedance", "snssdk", "toutiao", "umeng", "tanx", "cupid",
+    "bytedance", "snssdk", "isnssdk", "toutiao", "umeng", "tanx", "cupid",
+    "unity3d", "unityads", "kuaishou", "vungle", "applovin", "mintegral",
+    "ironsource", "inmobi", "adcolony", "chartboost",
 )
 # 功能词元：出现且无广告语义/无 ad 词根 → 判定为功能域，剔除
 FUNCTION_TOKENS = {
@@ -105,7 +107,11 @@ FUNCTION_TOKENS = {
     "media", "download", "upload", "file", "cdn", "update", "upgrade", "patch",
     "config", "cfg", "captcha", "verify", "sms", "code", "pay", "wallet",
     "order", "cart", "coupon", "search", "feed", "comment", "share", "live",
-    "room", "subscription", "member", "vip", "api", "sdk", "gateway", "openapi",
+    "room", "subscription", "member", "vip",
+    # 反面教训（2026-10-27）：api / sdk / gateway / openapi 曾在此表中，
+    # 导致 api-spe.isnssdk.com、o-sdk.mediation.unity3d.com、
+    # gateway-b.offerwall.unity3d.com 等广告端点被误判为功能域而删除。
+    # 这类词几乎出现在所有广告 SDK 域名里，不具备区分力，已移除。
 }
 RESOURCE_PREFIX = ("static", "download", "sdownload", "status", "update", "upgrade")
 
@@ -172,8 +178,9 @@ def has_function(d):
 
 
 def is_function_domain(d):
-    """功能域：有功能词元，且既无广告语义、也无 ad 词根。"""
-    return has_function(d) and not has_semantic(d) and not has_ad_root(d)
+    """功能域：有功能词元，且无广告语义、无 ad 词根、无广告平台痕迹。"""
+    return (has_function(d) and not has_semantic(d)
+            and not has_ad_root(d) and not has_platform(d))
 
 
 def is_resource(d):
@@ -397,10 +404,13 @@ def main():
         f = [x.strip() for x in line.split(",")]
         if len(f) >= 2:
             direct.add(f[1].lower())
+    # jinx-direct 与产物的关系是「顺序」而非「删除」：
+    #   jinx-direct 排在拦截集之前，更具体的规则先命中 DIRECT，功能域自然获救。
+    # 曾在此处删除「覆盖了 jinx-direct 条目的上层域」，导致 tanx.com / getui.net 等
+    # 平台主域被整条删掉 —— 为保一个功能子域而牺牲整个平台的其余子域，是过度处理。
+    # 现改为「只报告不删除」，顺序约束写进产物表头。
     shadowed_direct = sorted(g for g in direct if under(g, climbed))
-    # 删除"覆盖了 jinx-direct 条目"的上层域（DOMAIN-SUFFIX 无法排除单个子域）
-    supersets = {d for d in climbed if any(under(g, {d}) for g in shadowed_direct)}
-    final = sorted(climbed - supersets)
+    final = sorted(climbed)
 
     # ── 覆盖率：断言用独立基线（AWAvenue），Jinx 仅作参考 ──
     fset_tmp = set(final)
@@ -443,9 +453,10 @@ def main():
     _missing = [d for d in MUST_CONTAIN if d not in fset]
     if _missing:
         errs.append("产物缺失已知必需域：%s" % _missing)
-    _still = [g for g in direct if under(g, fset)]
-    if _still:
-        errs.append("jinx-direct 条目仍被产物覆盖 %d 条，例：%s" % (len(_still), _still[:3]))
+    # 不再断言「jinx-direct 不被覆盖」—— 覆盖是正常的，靠顺序保护。
+    # 改为断言：jinx-direct 必须非空（否则顺序保护无从谈起）
+    if not direct:
+        errs.append("jinx-direct 放行清单为空，无法提供顺序保护")
     if coverage is not None and coverage < COVERAGE_FLOOR:
         errs.append("独立基线覆盖率 %.1f%% 低于护栏 %.0f%%"
                     % (coverage * 100, COVERAGE_FLOOR * 100))
@@ -462,7 +473,10 @@ def main():
         "# 支路 B: AWAvenue · CJX · xinggsf · AdGuard_Chinese_filter · jiekouAD",
         "# 支路 C: 本仓 Jinx 3.2.3（上游已转加密发布，此快照冻结、不漂移）",
         "# 规矩: 仅 DNS 层可表达 · 纯 DOMAIN-SUFFIX 无通配 · 只拦域名不拦 IP",
-        "#       静态资源/功能域硬排除 · @@ 例外只做减法 · jinx-direct 条目零覆盖",
+        "#       静态资源/功能域硬排除 · @@ 例外只做减法",
+        "# ⚠️ 顺序约束：jinx-direct（放行清单）必须排在本规则集**之前**。",
+        "#    产物会覆盖部分 jinx-direct 条目（如 tanx.com 覆盖 wagbridge.alsc-prd.tanx.com），",
+        "#    靠「更具体的规则先命中 DIRECT」保护功能域；顺序颠倒会导致推送/登录失效。",
         "# 规模: %d 条" % len(final),
     ]
     audit = ["构建审计 / cn-adblock（v5 三支路 · 源快照可复现）", "=" * 64, "", "一、A 支路（lite）"]
@@ -486,7 +500,6 @@ def main():
         "  功能域剔除                  : -%d" % len(fn_drop),
         "  灰产随机长尾剔除            : -%d" % len(gray_drop),
         "  语义上提后                  : %d" % len(climbed),
-        "  jinx-direct 冲突剔除（上层域 %d 个） : -%d" % (len(supersets), len(supersets)),
         "  最终产物                    : %d" % len(final),
         "",
         "五、覆盖率",
@@ -497,20 +510,23 @@ def main():
         "  【参考】Jinx·中国生态 %d 条 → 覆盖 %d 条 = %s"
         % (len(j_cn), j_hit, ("%.1f%%" % (cov_jinx * 100)) if cov_jinx is not None else "未测"),
         "",
-        "六、jinx-direct 冲突处理",
+        "六、与 jinx-direct 放行清单的重叠（不删除，靠顺序保护）",
     ]
     if shadowed_direct:
+        audit.append("  以下 %d 条 jinx-direct 条目会被产物的上层后缀覆盖：" % len(shadowed_direct))
+        audit.append("  ⚠️ 必须确保 jinx-direct 规则集排在拦截集**之前**，")
+        audit.append("     否则这些功能域会被拦（推送/登录失效）。")
         for g in shadowed_direct:
-            owners = sorted(d for d in supersets if under(g, {d}))
-            audit.append("  %-42s ← 被上层域覆盖，已删除 %s" % (g, owners))
+            owners = sorted(d for d in climbed if under(g, {d}))
+            audit.append("  %-42s ← 被 %s 覆盖" % (g, owners[:2]))
     else:
-        audit.append("  无")
+        audit.append("  无重叠")
     audit += ["", "七、语义上提明细（%d 条）" % len(climb_log)]
     for src, dst in sorted(climb_log):
         audit.append("  %-46s -> %s" % (src, dst))
     audit += ["", "八、断言"]
     audit += ["  FAIL " + e for e in errs] or [
-        "  PASS 形态 / 静态资源 / 必需域 / jinx-direct 零覆盖 / 覆盖率 / 规模 / 无重复 —— 全部通过"]
+        "  PASS 形态 / 静态资源 / 必需域 / jinx-direct 非空 / 覆盖率 / 规模 / 无重复 —— 全部通过"]
 
     if args.dry_run:
         print("\n".join(audit))
