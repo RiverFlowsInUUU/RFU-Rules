@@ -48,6 +48,8 @@
 | **Surge** / **Egern** | [`surge-ads.list`](https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/surge-ads.list) `9534` | [`surge-direct.list`](https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/surge-direct.list) `49` |
 | **sing-box** | [`sing-box-ads.json`](https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/sing-box-ads.json) `9534` | [`sing-box-direct.json`](https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/sing-box-direct.json) `49` |
 
+🏷️ **版本从哪看**：mihomo / Surge 产物的头注第二行是 `# source: upstream/(A+B+C) · jinx <版本> (<快照日期>)`，打开文件第一屏就能看到数据基线。sing-box 的 JSON 格式容不下注释（`rule_set` 结构严格，不宜塞自定义键），所以那两份**不带版本标记** —— 请以 [Release 的 tag](https://github.com/RiverFlowsInUUU/RFU-Rules/releases) 为准（四端同源，同一 tag 下的内容逐字节一致）。
+
 📌 首选 **Raw GitHub**，每行一个完整地址：
 
 ```
@@ -308,6 +310,7 @@ uci commit openclash
 | 🧪 [`skill/SKILL.md`](skill/SKILL.md) | 匹配语义判定 · 通配映射 · 加新源的方法 · 断言口径 · 七条不要越的线 |
 | 🧰 [`skill/scripts/`](skill/scripts/) | `freeze_upstream.py` / `build_ads.py` / `convert_ruleset.py` / `regen.sh` |
 | 🧷 [`OVERLAP.md`](OVERLAP.md) | 白名单 × 拦截集重叠清单（构建生成 · CI 校验） |
+| 📄 [`WHITELIST-SLIM.md`](WHITELIST-SLIM.md) | 白名单瘦身留痕（保留/裁掉的逐条依据，CI 校验） |
 | 📄 [`NOTICE.md`](NOTICE.md) | 来源与使用条件（数据 vs 脚本分开授权） |
 | 📅 [`CHANGELOG.md`](CHANGELOG.md) | 规则变动记录 |
 

@@ -189,7 +189,8 @@ RFU-Rules/
 ├── 🔶 surge-*.list     # 2 份，与 mihomo 一一对应
 ├── 🔵 sing-box-*.json  # 2 份，与 mihomo 一一对应（rule-set source 格式）
 ├── 📝 custom-*.list    # 2 份人工维护源（--extra / --extra-white）
-├── 🧷 OVERLAP.md       # 白名单 × 拦截集重叠清单（构建生成，CI 校验）
+├── 🧷 OVERLAP.md        # 白名单 × 拦截集重叠清单（构建生成，CI 校验）
+├── 📄 WHITELIST-SLIM.md # 白名单瘦身留痕：44 保留 + 279 裁掉的逐条依据（CI 校验）
 ├── 📄 NOTICE.md        # 来源与使用条件（数据 / 脚本分开授权）
 ├── 📦 upstream/        # 冻结的上游快照 + manifest.json（构建输入，勿手改）
 ├── 🏗️ build/           # 三支路合成的中间结果（gitignore，不入库；产物在根目录）

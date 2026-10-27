@@ -524,6 +524,63 @@ def seg_upstream_pin(root, rep, counts, repro_failed=0):
               f'direct 应有条数: 产物 {real} != 瘦身留存 {kept} + 手工追加 {n_custom}',
               'direct 不是由当前白名单 + custom-direct.list 生成的 —— '
               '重跑 bash skill/scripts/regen.sh')
+
+    # 瘦身留痕（WHITELIST-SLIM.md）与独立复算比对（v3 审查发现 5.2）。
+    # 279 条被裁的白名单此前只打印在 stdout、仓内零记录；现在落盘了，
+    # 就必须被校验 —— 否则它和产物一样可能"声称 ≠ 实际"。
+    # 判据：摘要三项（总/留/裁）+ 保留集合、裁掉集合逐条相等（不复用 convert 的结果）。
+    slim = root / 'WHITELIST-SLIM.md'
+    if not slim.is_file():
+        rep.judge(False, 'pin', 'WHITELIST-SLIM.md 缺失',
+                  '瘦身留痕是 direct 的生成记录：重跑 bash skill/scripts/regen.sh')
+    else:
+        stext = slim.read_text(encoding='utf-8')
+        _norm = lambda s: s.strip().lstrip('-').strip().lstrip('.').lower()
+
+        def _section_rows(text, header):
+            seg = text.split(header, 1)[1] if header in text else ''
+            seg = seg.split('\n## ', 1)[0]
+            return set(re.findall(r'^\| `([^`]+)` \|', seg, re.M))
+
+        kept_re = { _norm(e) for e in wl_all if collides(e) }
+        dropped_re = { _norm(e) for e in wl_all } - kept_re
+        # ⚠️ 摘要的"总"必须按**消费口径**（小写归一去重后）对账，不是原始口径：
+        #   上游冻结快照含一对大小写变体（LOG-AUTH.FLYSLEEP.CN），version.json 的
+        #   domainWhitelistCount=324 是上游原始口径（上面 pin 已校验）；
+        #   而 convert 构建前先 dedup（323）—— 留痕报告记的是构建实际消费的集合，
+        #   两个口径各有用途，混用任何一个都会让本断言永远对不上或永远放空。
+        wl_dedup = []
+        _seen = set()
+        for e in wl_all:
+            k = e.lower()
+            if k not in _seen:
+                _seen.add(k)
+                wl_dedup.append(k)
+        want3 = (len(wl_dedup), len(kept_re), len(dropped_re))
+        kept_doc = { _norm(e) for e in _section_rows(stext, '## 一、保留') }
+        dropped_doc = { _norm(e) for e in _section_rows(stext, '## 二、裁掉') }
+
+        m = re.search(r'\*\*共 (\d+) 条上游白名单 → 保留 (\d+)（会被黑名单误杀）'
+                      r'\+ 裁掉 (\d+)（不被黑名单覆盖）\*\*', stext)
+        if not m:
+            rep.judge(False, 'pin', 'WHITELIST-SLIM.md 摘要行未命中（版式变了？）',
+                      '判据锚在「**共 N 条上游白名单 → 保留 A（…）+ 裁掉 B（…）**」')
+        else:
+            got = tuple(int(x) for x in m.groups())
+            rep.judge(got == want3, 'pin',
+                      f'瘦身留痕摘要: {got} == {want3}' if got == want3 else
+                      f'瘦身留痕摘要: 声明 {got} != 复算 {want3}',
+                      '（总, 保留, 裁掉）三项都要对上')
+        for name, doc, re_ in (('保留集合', kept_doc, kept_re),
+                               ('裁掉集合', dropped_doc, dropped_re)):
+            extra, missing = sorted(doc - re_), sorted(re_ - doc)
+            rep.judge(not extra and not missing, 'pin',
+                      f'瘦身留痕 {name}逐条一致（{len(doc)} 条）'
+                      if not extra and not missing else
+                      f'瘦身留痕 {name}与复算不一致：多 {len(extra)} / 缺 {len(missing)}',
+                      ('多出: ' + ', '.join(extra[:4]) if extra else '') +
+                      ('；缺失: ' + ', '.join(missing[:4]) if missing else ''))
+
     rep.judge(True, 'pin',
               f'冻结基线：Jinx {version}（{date}）· '
               f'blacklist {blk} / whitelist {wl}')

@@ -29,6 +29,7 @@ echo "== 1/4 direct 放行清单（上游白名单 → 瘦身 → 三平台）==
     --tag direct --mode exact --naming repo \
     --guard-against-fixed blacklist.txt \
     --guard-against-wild blacklist_wildcard.txt \
+    --slim-report WHITELIST-SLIM.md \
     --extra-white custom-direct.list
 
 echo

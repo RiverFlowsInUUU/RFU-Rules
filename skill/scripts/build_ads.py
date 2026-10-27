@@ -332,7 +332,7 @@ def render_overlap(same, above, climbed, n_direct, label_text):
         "",
         "> 本文件由 `skill/scripts/build_ads.py` 生成，**勿手改**。",
         "> 生成依据：%s" % label_text,
-        "> CI 会独立复算并与此文件比对（第 14 段），数字或清单不符即判负。",
+        "> CI 会独立复算并与此文件比对（verify_products.py 第 12 段 · 共 14 段），数字或清单不符即判负。",
         "",
         "**共 %d 条**：%d 条同域同名 + %d 条上层后缀覆盖（白名单共 %d 条，其余 %d 条与拦截集无关）。"
         % (len(same) + len(above), len(same), len(above), n_direct,

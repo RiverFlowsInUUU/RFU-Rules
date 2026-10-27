@@ -204,6 +204,61 @@ def build_blacklist_matcher(fixed_paths, wild_paths):
     return collides
 
 
+def write_slim_report(path, all_entries, kept, label):
+    """guard 模式的裁剪留痕（2026-10-27 v3 审查发现 5.2）。
+
+    此前裁剪结果只打印在 stdout —— 仓内零记录。将来有人问
+    "为什么 jpush.cn 在放行清单里、而 github.com 不在"，仓库答不上来。
+    现在保留/裁掉两个集合连同各自的依据落盘成 markdown，
+    verify_products.py 第 6b 段会独立复算并与此文件比对。
+    """
+    kept_set = {e for e, _ in kept}
+    dropped = [e for e in all_entries if e not in kept_set]
+    lines = [
+        "# 白名单瘦身留痕（WHITELIST-SLIM）",
+        "",
+        "> 本文件由 `convert_ruleset.py --slim-report` 生成，**勿手改**。",
+        "> 生成依据：%s 的白名单（%d 条）× 黑名单（DOMAIN-SUFFIX 语义）。" % (label, len(all_entries)),
+        "> CI 独立复算并与此文件比对（verify_products.py 第 6b 段），不符即判负。",
+        "",
+        "**共 %d 条上游白名单 → 保留 %d（会被黑名单误杀）+ 裁掉 %d（不被黑名单覆盖）**，"
+        % (len(all_entries), len(kept), len(dropped)),
+        "另有手工追加条目见 `custom-direct.list`（不参与裁剪，直接进产物）。",
+        "",
+        "> 📌 口径说明：`共 N 条` 是**小写归一去重后**的构建输入口径（上游冻结快照里"
+        "存在大小写变体，如 LOG-AUTH.FLYSLEEP.CN）；上游原始条数（含重复）见"
+        " version.json 的 domainWhitelistCount，由第 6b 段按**原始口径**另行校验。",
+        "",
+        "## 口径",
+        "",
+        "- **保留**：该白名单条目会被黑名单命中（精确相等 / 被通配匹配 / 是黑名单条目的子域）",
+        "  —— 不放行就会被拦，功能域故障（推送、登录等）。",
+        "- **裁掉**：黑名单不含其任何祖先域 —— 本来就不会被拦，落回常规分流，无需占放行位置。",
+        "",
+        "## 一、保留（%d 条）" % len(kept),
+        "",
+        "| 白名单条目 | 命中依据 |",
+        "|:--|:--|",
+    ]
+    for e, why in kept:
+        lines.append("| `%s` | %s |" % (e, why))
+    lines += [
+        "",
+        "## 二、裁掉（%d 条）" % len(dropped),
+        "",
+        "| 白名单条目 | 理由 |",
+        "|:--|:--|",
+    ]
+    for e in dropped:
+        lines.append("| `%s` | 黑名单不含其任何祖先域 |" % e)
+    lines.append("")
+    p = pathlib.Path(path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    with open(p, 'w', encoding='utf-8', newline='') as f:
+        f.write('\n'.join(lines))
+    print('瘦身留痕: %s（保留 %d / 裁掉 %d）' % (p, len(kept), len(dropped)))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--src', required=True, help='源目录或文件路径')
@@ -229,6 +284,10 @@ def main():
                          '用途: 上游未放行、但实测必须直连的功能域')
     ap.add_argument('--guard-against-fixed', nargs='*', help='黑名单精确域名文件, 给出则只保留会被其误杀的白名单条目')
     ap.add_argument('--guard-against-wild', nargs='*', help='黑名单通配域名文件, 同上')
+    ap.add_argument('--slim-report', default=None,
+                    help='guard 模式的裁剪留痕（WHITELIST-SLIM.md）：保留条目含命中的黑名单规则、'
+                         '被裁条目含理由，落盘成 markdown。此前裁剪只打印在 stdout，'
+                         '仓内无任何记录 —— "为什么 jpush.cn 在放行清单而 github.com 不在"答不上来')
     args = ap.parse_args()
 
     src = pathlib.Path(args.src)
@@ -273,6 +332,8 @@ def main():
         kept = [k for k in kept if k[1]]
         print('guard 模式: %d 条白名单 -> %d 条真正冲突(需保留), 裁掉 %d 条'
               % (before, len(kept), before - len(kept)))
+        if args.slim_report:
+            write_slim_report(args.slim_report, entries, kept, args.label or args.src)
         entries = [k[0] for k in kept]
 
     # --extra-white: 直连域, 追加在 guard 之后, 不参与任何裁剪

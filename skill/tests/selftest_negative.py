@@ -333,6 +333,37 @@ def _(w):
     p.write_text(t[:m.start(1)] + str(int(m.group(1)) - 1) + t[m.end(1):], encoding='utf-8')
 
 
+@case('瘦身留痕摘要数字写错（第 6b 段）', '瘦身留痕摘要: 声明')
+def _(w):
+    """改 WHITELIST-SLIM.md 摘要行的保留数。
+
+    守第 6b 段新增的瘦身留痕判据：摘要三项（总/留/裁）与独立复算比对。
+    """
+    p = w / 'WHITELIST-SLIM.md'
+    t = p.read_text(encoding='utf-8')
+    m = re.search(r'\*\*共 (\d+) 条上游白名单 → 保留 (\d+)（会被黑名单误杀）'
+                  r'\+ 裁掉 (\d+)（不被黑名单覆盖）\*\*', t)
+    assert m, '负样本失效：WHITELIST-SLIM.md 摘要行版式变了'
+    p.write_text(t[:m.start(2)] + str(int(m.group(2)) + 1) + t[m.end(2):],
+                 encoding='utf-8')
+
+
+@case('瘦身留痕漏一条保留行（第 6b 段）', '瘦身留痕 保留集合与复算不一致')
+def _(w):
+    """删掉 WHITELIST-SLIM.md「保留」节的一行表格。
+
+    只对数字不对清单的话，这一条会被漏掉 —— 与 OVERLAP 的同名样本同理，
+    摘要与逐条是两盘独立的守卫，各配一条。
+    """
+    p = w / 'WHITELIST-SLIM.md'
+    lines = p.read_text(encoding='utf-8').splitlines()
+    head = [l for l in lines if l.startswith('## 一、保留')][0]
+    i = lines.index(head)
+    j = next(k for k in range(i + 1, len(lines)) if lines[k].startswith('| `'))
+    del lines[j]
+    p.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+
+
 def main():
     if not TARGET.is_file():
         print(f'❌ 前置不达标：找不到 {TARGET}')
