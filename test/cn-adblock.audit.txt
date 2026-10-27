@@ -67,8 +67,9 @@
   guard 冲突剔除（上层域 34 个） : -34
   最终产物                    : 9276
 
-五、覆盖率（回归护栏）
-  Jinx·中国生态 1511 条 → 覆盖 1382 条 = 91.5%
+五、覆盖率
+  【断言基线·独立】AWAvenue_Ads_Rule.txt 969 条 → 覆盖 875 条 = 90.3%（护栏 85%）
+  【参考】Jinx·中国生态 1511 条 → 覆盖 1382 条 = 91.5%
 
 六、guard 冲突处理
   apd-pcdnwxlogin.teg.tencent-cloud.net      ← 被上层域覆盖，已删除 ['apd-pcdnwxlogin.teg.tencent-cloud.net']

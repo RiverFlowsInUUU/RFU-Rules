@@ -49,6 +49,7 @@ v4（三支路 · lite + 5 源 + Jinx）：约 9,300 条，覆盖 Jinx·中国 9
 """
 import argparse
 import collections
+import hashlib
 import os
 import re
 import sys
@@ -114,7 +115,12 @@ MUST_CONTAIN = [
     "gdt.qq.com", "e.qq.com", "umeng.com", "alog.umeng.com",
     "ad.xiaomi.com", "analytics.126.net",
 ]
-COVERAGE_FLOOR = 0.90
+# 覆盖率断言基线必须「独立于支路来源」，否则是同义反复。
+# 曾用 Jinx 作基线，而 Jinx 本身就是 C 支路 → 91.5% 等于自证。
+# 现改用 AWAvenue（主流国内 App 广告真值，产物仅部分采用）。
+COVERAGE_BASELINE = "AWAvenue_Ads_Rule.txt"
+COVERAGE_FLOOR = 0.85
+COVERAGE_FLOOR_JINX_REF = 0.90   # Jinx·中国生态 仅作参考播报，不参与判负
 SIZE_RANGE = (5000, 15000)
 
 MULTI_SUFFIX = {
@@ -264,11 +270,45 @@ def parse_jinx(text, stat):
     return out
 
 
+def snapshot_name(fname):
+    """把源标识转成安全的快照文件名。
+
+    URL 里含 ':' '/' 等字符，Windows 下非法 —— 曾因此生成名为 "https" 的目录。
+    做法：取 basename + 路径哈希前缀，保证唯一且跨平台合法。
+    """
+    raw = fname if fname.startswith("http") else BASE + fname
+    base = os.path.basename(raw.split("?")[0]) or "src"
+    tag = hashlib.sha1(raw.encode()).hexdigest()[:8]
+    return "%s.%s.txt" % (base, tag)
+
+
+def fetch(fname, src_dir):
+    """统一取源：优先读 --src-dir 快照，缺失则下载并落盘。
+
+    这是「产物可复现」的前提 —— 远程源天天变，直连拉取则每次结果不同，
+    无法满足本仓「产物 == 源头重跑」的断言惯例（参见 jinx-rules/ 的做法）。
+    """
+    url = fname if fname.startswith("http") else BASE + fname
+    if not src_dir:
+        return http_get(url), "live"
+    path = os.path.join(src_dir, snapshot_name(fname))
+    if os.path.exists(path):
+        return open(path, encoding="utf-8", errors="replace").read(), "snapshot"
+    text = http_get(url)
+    os.makedirs(src_dir, exist_ok=True)
+    with open(path, "w", encoding="utf-8", newline="") as f:
+        f.write(text)
+    return text, "download"
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", required=True)
     ap.add_argument("--audit", required=True)
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--src-dir", default=None,
+                    help="源快照目录。存在则从本地读取（可复现）；"
+                         "不存在则下载并落盘，供下次离线复跑")
     args = ap.parse_args()
 
     stat_a = collections.Counter()
@@ -277,7 +317,7 @@ def main():
 
     # ── A 支路：lite ─────────────────────────────────────────
     try:
-        A = parse_domain_set(http_get(BASE + LITE_FILE), stat_a)
+        A = parse_domain_set(fetch(LITE_FILE, args.src_dir)[0], stat_a)
     except Exception as e:                                     # noqa: BLE001
         print("下载 lite 失败: %s" % e, file=sys.stderr)
         return 2
@@ -287,7 +327,7 @@ def main():
     exceptions = set()
     for fname, label in B_SOURCES:
         try:
-            text = http_get(BASE + fname)
+            text = fetch(fname, args.src_dir)[0]
         except Exception as e:                                 # noqa: BLE001
             print("下载 %s 失败: %s" % (fname, e), file=sys.stderr)
             return 2
@@ -306,7 +346,7 @@ def main():
 
     # ── C 支路：Jinx 3.2.3（仓内冻结，不会漂移）───────────────
     try:
-        jtxt = http_get(JINX_URL)
+        jtxt = fetch(JINX_URL, args.src_dir)[0]
     except Exception as e:                                     # noqa: BLE001
         print("下载 Jinx 失败: %s" % e, file=sys.stderr)
         return 2
@@ -345,7 +385,7 @@ def main():
 
     # 后处理⑤：guard 冲突（方向：guard 条目是否被产物覆盖）
     try:
-        gtxt = http_get(GUARD_URL)
+        gtxt = fetch(GUARD_URL, args.src_dir)[0]
     except Exception as e:                                     # noqa: BLE001
         print("下载 guard 失败: %s" % e, file=sys.stderr)
         return 2
@@ -362,19 +402,31 @@ def main():
     supersets = {d for d in climbed if any(under(g, {d}) for g in bad_guards)}
     final = sorted(climbed - supersets)
 
-    # ── 覆盖率（对 Jinx·中国生态）───────────────────────────
+    # ── 覆盖率：断言用独立基线（AWAvenue），Jinx 仅作参考 ──
+    fset_tmp = set(final)
+    try:
+        awa = set()
+        for l in fetch(COVERAGE_BASELINE, args.src_dir)[0].splitlines():
+            l = l.strip()
+            if l.startswith("||") and l.endswith("^"):
+                d = l[2:-1].lower()
+                if DOMAIN_RE.match(d):
+                    awa.add(d)
+        awa_hit = sum(1 for d in awa if under(d, fset_tmp))
+        coverage = awa_hit / len(awa) if awa else None
+    except Exception:                                          # noqa: BLE001
+        awa, awa_hit, coverage = set(), 0, None
     try:
         cn_base = set()
-        for l in http_get(BASE + "china.txt").splitlines():
+        for l in fetch("china.txt", args.src_dir)[0].splitlines():
             l = l.strip().lower().lstrip(".")
             if l and not l.startswith("#") and "." in l:
                 cn_base.add(registrable(l))
         j_cn = [d for d in C if registrable(d) in cn_base]
-        fset_tmp = set(final)
-        hit = sum(1 for d in j_cn if under(d, fset_tmp))
-        coverage = hit / len(j_cn) if j_cn else 0.0
+        j_hit = sum(1 for d in j_cn if under(d, fset_tmp))
+        cov_jinx = j_hit / len(j_cn) if j_cn else None
     except Exception:                                          # noqa: BLE001
-        j_cn, hit, coverage = [], 0, None
+        j_cn, j_hit, cov_jinx = [], 0, None
 
     # ── 断言 ───────────────────────────────────────────────
     errs = []
@@ -395,7 +447,8 @@ def main():
     if _still:
         errs.append("guard 条目仍被产物覆盖 %d 条，例：%s" % (len(_still), _still[:3]))
     if coverage is not None and coverage < COVERAGE_FLOOR:
-        errs.append("覆盖率 %.1f%% 低于护栏 %.0f%%" % (coverage * 100, COVERAGE_FLOOR * 100))
+        errs.append("独立基线覆盖率 %.1f%% 低于护栏 %.0f%%"
+                    % (coverage * 100, COVERAGE_FLOOR * 100))
     if not (SIZE_RANGE[0] <= len(final) <= SIZE_RANGE[1]):
         errs.append("产物规模 %d 超出护栏 %s" % (len(final), SIZE_RANGE))
     if len(final) != len(fset):
@@ -436,9 +489,13 @@ def main():
         "  guard 冲突剔除（上层域 %d 个） : -%d" % (len(supersets), len(supersets)),
         "  最终产物                    : %d" % len(final),
         "",
-        "五、覆盖率（回归护栏）",
-        "  Jinx·中国生态 %d 条 → 覆盖 %d 条 = %s"
-        % (len(j_cn), hit, ("%.1f%%" % (coverage * 100)) if coverage is not None else "未测"),
+        "五、覆盖率",
+        "  【断言基线·独立】%s %d 条 → 覆盖 %d 条 = %s（护栏 %.0f%%）"
+        % (COVERAGE_BASELINE, len(awa), awa_hit,
+           ("%.1f%%" % (coverage * 100)) if coverage is not None else "未测",
+           COVERAGE_FLOOR * 100),
+        "  【参考】Jinx·中国生态 %d 条 → 覆盖 %d 条 = %s"
+        % (len(j_cn), j_hit, ("%.1f%%" % (cov_jinx * 100)) if cov_jinx is not None else "未测"),
         "",
         "六、guard 冲突处理",
     ]
