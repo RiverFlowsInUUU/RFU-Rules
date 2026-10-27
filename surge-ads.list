@@ -1,7 +1,7 @@
 # auto-converted by adblock-ruleset-port
 # source: upstream/(A+B+C) · jinx 3.2.3 (2026-10-18)
 # mode: suffix
-# entries: 9534
+# entries: 9535
 # extra: custom-ads.list(1)
 DOMAIN-SUFFIX,0001-metrics1-drcn-dt-dbankcloud-cn.geac.dbankedge.cn
 DOMAIN-SUFFIX,0002-metrics1-drcn-dt-dbankcloud-cn.geac.dbankedge.cn
@@ -7467,6 +7467,7 @@ DOMAIN-SUFFIX,sdk-log.partner.sm.cn
 DOMAIN-SUFFIX,sdk-log.youdao.com
 DOMAIN-SUFFIX,sdk-track.66mobi.com
 DOMAIN-SUFFIX,sdk.1rtb.net
+DOMAIN-SUFFIX,sdk.51.la
 DOMAIN-SUFFIX,sdk.adhuanxiao.com
 DOMAIN-SUFFIX,sdk.alibaba.com.ailbaba.me
 DOMAIN-SUFFIX,sdk.aqyad.com

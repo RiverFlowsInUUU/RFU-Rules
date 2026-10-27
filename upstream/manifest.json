@@ -1,6 +1,6 @@
 {
-  "frozen_at": "2026-10-27T04:22:16+00:00",
-  "policy": "上游一律冻结，构建只读 upstream/，不联网。要更新跑 skill/scripts/freeze_upstream.py。",
+  "frozen_at": "2026-10-27T12:05:13+00:00",
+  "policy": "上游快照落盘，构建只读 upstream/，不联网。jinx 钉死 3.2.3，其余源每周由定时工作流刷新。要更新跑 skill/scripts/freeze_upstream.py。",
   "hash_basis": "bytes 与 sha256 均按换行归一化（LF）后的文本计算，与仓库内 .gitattributes 的 eol=lf 一致。",
   "jinx_commit": "c85751d",
   "sources": [
@@ -53,7 +53,7 @@
       "group": "217heidai",
       "path": "217heidai/adblocksurgelite.list",
       "url": "https://raw.githubusercontent.com/217heidai/adblockfilters/main/rules/adblocksurgelite.list",
-      "sha256": "54b46434e930529256eff1bf466fd6c410feff0bb1d3916ae717b1f74a0f8022",
+      "sha256": "e689b39dd3e875ef639b404c4dd7200d4f2ae42f9fc6a252b3db92c4d2a41f8a",
       "bytes": 162652,
       "lines": 8480,
       "note": "16 源聚合后 ∩ china.txt 的 lite 档（DOMAIN-SET 格式）"
@@ -62,18 +62,18 @@
       "group": "217heidai",
       "path": "217heidai/china.txt",
       "url": "https://raw.githubusercontent.com/217heidai/adblockfilters/main/rules/china.txt",
-      "sha256": "23a1d548beb9e2422cef65f078007acfe9e079cae00c4c7459c38d0c776d36aa",
-      "bytes": 207809,
-      "lines": 12143,
+      "sha256": "168c85896ccdd6e542a377c36137cb548a3d220bc7a932fbd42d5a182e0e0c05",
+      "bytes": 208868,
+      "lines": 12205,
       "note": "中国域名清单（判定「中国生态」的基准）"
     },
     {
       "group": "cn",
       "path": "cn/AdGuard_Chinese_filter.txt",
       "url": "https://raw.githubusercontent.com/217heidai/adblockfilters/main/rules/AdGuard_Chinese_filter.txt",
-      "sha256": "ee6ab97f420551ca382f8b7457e21411fe301250a9d6871ae61057038052b57b",
-      "bytes": 732689,
-      "lines": 21095,
+      "sha256": "452f9412e6fa356c7145a905479dad59ea0714c17efe816e4b1695615e90fc4b",
+      "bytes": 732762,
+      "lines": 21099,
       "note": "AdGuard 官方中文过滤器"
     },
     {
@@ -89,9 +89,9 @@
       "group": "cn",
       "path": "cn/jiekouAD.txt",
       "url": "https://raw.githubusercontent.com/217heidai/adblockfilters/main/rules/jiekouAD.txt",
-      "sha256": "f5ff18cab4bddbf5efe549f77ee7f15b85938e7e282c1e7be2a0ff37b34f3f64",
-      "bytes": 129121,
-      "lines": 5375,
+      "sha256": "9590b2f34bf3d1e5c4317a645f264aec9b7b51a3b082634396d920db60278c1d",
+      "bytes": 129174,
+      "lines": 5378,
       "note": "接口广告源（灰产长尾多，靠准入规则滤）"
     },
     {

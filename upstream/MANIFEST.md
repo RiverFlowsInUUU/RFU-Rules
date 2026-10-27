@@ -1,23 +1,24 @@
-# 📌 上游快照清单（冻结）
+# 📌 上游快照清单
 
 > [!IMPORTANT]
 > 本目录是**构建输入**，不是产物。**不要手改这里的任何文件** ——
 > 手改会破坏「产物 == 源头重跑」的可复现断言（`verify_products.py` 会判负）。
 > 要更新上游，跑 `python skill/scripts/freeze_upstream.py`，让改动留在 git diff 里可审计。
 
-## 为什么冻结
+## 源策略
 
-Jinx 上游自 `3.2.4` 起改为加密发布（`new-rules/*.enc`，需接收方 P-256 私钥），
-明文 `rules/` 停在 `3.2.3`。其余中文源若继续实时拉取，产物天天漂，
-`产物 == 源头重跑` 永远不成立，CI 也变成对着网络赌运气。
+jinx 上游自 `3.2.4` 起改为加密发布（`new-rules/*.enc`，需接收方 P-256 私钥），
+明文 `rules/` 停在 `3.2.3` —— 用 commit 钉住，任何情况下不动；
+其余中文源为活源，由每周定时工作流（`.github/workflows/update.yml`）刷新，
+任一源抓取失败即不落盘、不提交，仓内不出现半新半旧的快照。
 
-故六个源一律落盘，构建只读本目录、**不联网**。
+构建只读本目录、**不联网**。
 
-## 冻结信息
+## 快照信息
 
 | 项 | 值 |
 |---|---|
-| 冻结时间（UTC） | `2026-10-27T04:22:16+00:00` |
+| 取用时间（UTC） | `2026-10-27T12:05:13+00:00` |
 | Jinx 明文通道锚点 | `VME98/jinx-rules@c85751d`（对应版本见 `jinx-3.2.3/version.json`） |
 | 源文件数 | 12 |
 
@@ -30,11 +31,11 @@ Jinx 上游自 `3.2.4` 起改为加密发布（`new-rules/*.enc`，需接收方 
 | jinx-3.2.3 | `whitelist.txt` | 5244 | 283 | `6d13c59c5bb8` | 上游白名单（精确语义） |
 | jinx-3.2.3 | `whitelist_wildcard.txt` | 661 | 41 | `4b7c55399782` | 上游白名单通配 |
 | jinx-3.2.3 | `version.json` | 898 | 30 | `d9c20f057a4c` | 上游版本自述 |
-| 217heidai | `adblocksurgelite.list` | 162652 | 8480 | `54b46434e930` | 16 源聚合后 ∩ china.txt 的 lite 档（DOMAIN-SET 格式） |
-| 217heidai | `china.txt` | 207809 | 12143 | `23a1d548beb9` | 中国域名清单（判定「中国生态」的基准） |
-| cn | `AdGuard_Chinese_filter.txt` | 732689 | 21095 | `ee6ab97f4205` | AdGuard 官方中文过滤器 |
+| 217heidai | `adblocksurgelite.list` | 162652 | 8480 | `e689b39dd3e8` | 16 源聚合后 ∩ china.txt 的 lite 档（DOMAIN-SET 格式） |
+| 217heidai | `china.txt` | 208868 | 12205 | `168c85896ccd` | 中国域名清单（判定「中国生态」的基准） |
+| cn | `AdGuard_Chinese_filter.txt` | 732762 | 21099 | `452f9412e6fa` | AdGuard 官方中文过滤器 |
 | cn | `AWAvenue_Ads_Rule.txt` | 23470 | 984 | `fdf930d67659` | 秋风广告规则 |
-| cn | `jiekouAD.txt` | 129121 | 5375 | `f5ff18cab4bd` | 接口广告源（灰产长尾多，靠准入规则滤） |
+| cn | `jiekouAD.txt` | 129174 | 5378 | `9590b2f34bf3` | 接口广告源（灰产长尾多，靠准入规则滤） |
 | cn | `CJX_Annoyance_List.txt` | 57229 | 1840 | `f5afcf694eb6` | CJX 中文骚扰+广告 |
 | cn | `xinggsf_mv.txt` | 6533 | 160 | `1165b91dd489` | xinggsf（优酷等） |
 
