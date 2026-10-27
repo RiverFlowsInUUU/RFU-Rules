@@ -33,6 +33,7 @@ agent_created: true
 5. **规则顺序是生死线。** `direct` 必须排在 `ads` 之前。拦截集里有平台主域（`umeng.com` / `tanx.com` / `getui.net`）覆盖了放行清单的功能子域，靠「更具体的规则先命中 DIRECT」保护。顺序颠倒 = 推送和登录失效。
 6. **不给拦截行加 `pre-matching`。** 它会把 REJECT 抽到所有规则之前评估，`direct` 那行永远轮不到。
 7. **改完必跑两层闸门**，缺一不可：`verify_products.py` 判对错，`selftest_negative.py` 证明闸门自己还能抓错。
+8. **本仓不发版、不建定时更新。** 订阅地址钉在 `main`，客户端自行按 `update-interval` 拉取；社区同类规则仓（blackmatrix7 / hagezi / Sukka）均如此，Release/tag 与滚动数据模型不匹配。定时跑 `regen.sh` 会因产物逐字节可复现而零 diff，纯空转；定时联网拉上游则推翻「上游冻结」决策。tag `v3.2.3-2026.10.27` 是历史钉子，留而不续。
 
 ## 构建链（三步，顺序不可交换）
 
