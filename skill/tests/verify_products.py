@@ -47,10 +47,10 @@ direct 仍由上游白名单瘦身而来。两者都只读 `upstream/`，**构�
      否则带 U+FE0F 的那个会占两格、该行在宽字符字体下错位。
  12. 白名单 × 拦截集重叠清单（OVERLAP.md）与当前产物一致 —— 独立复算，
      防「清单写的和产物算的不是一回事」。这是本仓唯一对外可见的风险清单。
- 13. 段号引用与段数声明 == 真实段标/段数 —— ①「第 N 段」的 N 必须在段标里；
-     ② 去掉①后残余的裸「N 段」必须等于编号段总数。「第 N 段」与「N 段」都是
-     手写常量、随拆分漂移，此类失真已发生五次且前四次全靠外部审查抓出
-     （v5 审查 3.3 提议、v6 审查 2.1 补全第②型）。
+ 13. 段号引用与段数声明 == 真实段标/段数 —— ①「第 N 段」的 N 必须在段标里
+     （数字限两位，与②护栏对齐）；②声明位文件里的裸「N 段」必须等于编号段总数。
+     两类都是手写常量、随拆分漂移，此类失真已发生五次且前四次全靠外部审查抓出
+     （v5 3.3 提议 · v6 2.1 补②型 · v7 收窄②型范围并对齐护栏）。
 
 闸门自身可信度由 skill/tests/selftest_negative.py 保证：它在临时副本仓里
 制造 18 种典型错误，要求本脚本逐一判负 —— 防止闸门退化成「永远绿的空操作」。
@@ -1272,6 +1272,16 @@ def seg_section_refs(root, rep):
         return (int(m.group(1)), m.group(2))
 
     n_seg = len([k for k in labels if k != '0'])   # 编号段总数（前置 0 不计）
+    # 段数声明的「声明位文件」。判断标准：这份文件的读者需要知道「一共几段」。
+    # 段号引用（①型）仍全仓扫描 —— 「第 N 段」语义无歧义，不存在措辞税。
+    DECL_FILES = {
+        'OVERLAP.md', 'WHITELIST-SLIM.md',          # 生成物（CI 比对对象）
+        'README.md', 'NOTICE.md',
+        'skill/SKILL.md', 'DetailsReadme/DetailsReadme.md',
+        'skill/scripts/build_ads.py',               # 生成器模板
+        'skill/tests/verify_products.py',           # 判据自身的清单头
+        '.github/workflows/ci.yml',
+    }
     bad, bad_count, scanned = [], [], 0
     for p in root.rglob('*'):
         if not p.is_file():
@@ -1286,14 +1296,19 @@ def seg_section_refs(root, rep):
             text = p.read_text(encoding='utf-8', errors='replace')
         except Exception:                       # noqa: BLE001
             continue
-        # ① 段号引用
-        for m in re.finditer(r'第\s*([0-9]+[a-z]?)\s*段', text):
+        # ① 段号引用。数字限 1-2 位：与②型护栏对齐（v7 审查 2.2）——
+        #   「第 2190 段」这类 Unicode 区段引用不该被判负；段标最大两位（13）。
+        for m in re.finditer(r'第\s*([0-9]{1,2}[a-z]?)\s*段', text):
             scanned += 1
             if m.group(1) not in labels:
                 bad.append((rel, m.group(1)))
-        # ② 段数声明：去掉①后扫裸「N 段」。
-        #    (?<!\d) 挡 Unicode 区段引用（如「2190 段」这类 4 位数）；{1,2} 同理兜一层。
-        residue = re.sub(r'第\s*[0-9]+[a-z]?\s*段', '', text)
+        # ② 段数声明：只扫「声明位文件」里的裸「N 段」（v7 审查 2.1）。
+        #    全文一刀切是措辞税 —— 「分三段讲清楚」这类正常中文会被判红，
+        #    误报多了人会绕着判据写文档，它就变成下一个没人看的地方。
+        #    声明只应出现在下列文件；新文件开始携带段数声明时把它加进来。
+        if rel not in DECL_FILES:
+            continue
+        residue = re.sub(r'第\s*[0-9]{1,2}[a-z]?\s*段', '', text)
         for m in re.finditer(r'(?<!\d)(\d{1,2})\s*段', residue):
             scanned += 1
             if int(m.group(1)) != n_seg:
