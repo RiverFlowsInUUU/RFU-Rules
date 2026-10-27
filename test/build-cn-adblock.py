@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""build-cn-adblock.py —— 中文广告 / 统计 / 隐私 / PCDN 域名规则集构建器（v3 双支路）
+"""build-cn-adblock.py —— 中文广告 / 统计 / 隐私 / PCDN 域名规则集构建器（v4 三支路）
 
-为什么是双支路（v2 单支路的教训）
-================================
-v2 只用 5 个中文源自建，产物 1,341 条，对 Jinx 中国生态的覆盖仅 46.8%。
-拆解缺口发现：**85% 的缺口不是被筛掉的，而是那 5 个源里根本没有**
-（例如 a.alimama.cn、abtest3-misc-*.zijieapi.com、acookie.alimama.com）。
-
-217 的 lite 是「全量 16 源 ∩ china.txt」，是另一条浓缩路线，覆盖 60.6%，
-与 5 源路线互补。两者并联后覆盖 **70.8%**，逼近 full 的天花板 74.7%，
-而体积仅约 7,000 条（full 的 3%）。
-
-因此：**A 支路（lite）+ B 支路（5 源）并联**，各自先做减法和剔除，再合并。
+版本演进（每次都是核查后推翻前一版的错误假设，保留在此供追溯）
+================================================================
+v2（单支路 · 5 源）：1,341 条，覆盖 Jinx·中国 46.8%。
+    错在「源选错」——85% 的缺口不是被筛掉，而是那 5 源里根本没有。
+v3（双支路 · lite + 5 源）：7,108 条，覆盖 70.6%。
+    补上了源覆盖，但留下两个缺陷：
+    ① **guard 冲突检测方向反了**（查"产物条目是否在 guard 里"，
+       应为"guard 条目是否被产物覆盖"）→ `getui.net` / `gepush.com` 整域留存，
+       个推推送会被拦，用户可感知故障。
+    ② A 支路（lite）未做功能域过滤 → 带入 `c.uaa.iqiyi.com`（统一账号认证）、
+       `cm.passport.iqiyi.com`（登录）、`doh.iqiyi.com` 等 449 条功能域。
+v4（三支路 · lite + 5 源 + Jinx）：约 9,300 条，覆盖 Jinx·中国 93%+。
+    Jinx 3.2.3 已冻结在仓内、不会漂移，作为"补丁支路"使用最稳；
+    它的通配部分（158 条 DOMAIN-REGEX）无法转后缀，按规则丢弃。
 
 规则
 ====
@@ -20,22 +23,24 @@ v2 只用 5 个中文源自建，产物 1,341 条，对 Jinx 中国生态的覆�
 2. `@@` 例外只做减法，不生成 DIRECT 行（不在拦截集里就落回分流，路由自动正确）。
 3. 只输出 DOMAIN-SUFFIX，无通配无正则（三端语义一致，走 trie 快路径）。
 4. 只拦域名不拦 IP（IPv4 / CIDR 一律剔除）。
-5. **静态资源硬排除**：label 以 static / download / status / update 开头者一律剔除，
-   不受任何豁免。反面实证：s.bdstatic.com、static-s.iqiyi.com、
-   download.changhong.upgrade2.huan.tv 被误拦会造成页面挂图裂、固件下载失败。
-6. **灰产判定用结构，不用语义猜**（仅作用于 A 支路）：归属域下孤立 1 条 + 无广告语义
-   + 形态随机（元音占比低且含数字）→ 灰产长尾剔除。不访问的域名不造成误杀，
-   故残留可容忍；但结构性长尾可以不收。
-7. **词边界匹配**：语义判定按 label 切分后的词元精确比对，禁止短词做子串
-   （曾用裸 "ad"/"stat"/"log" 子串，误收 static / bdstatic / download / prologue /
-   nchanado，是本方案最严重的一次翻车）。
-8. 与 guard 白名单冲突即剔除；`@@` 例外做减法；语义上提收敛到语义 label。
+5. **静态资源硬排除**：label 以 static / download / status / update 开头者一律剔除。
+   反面实证：s.bdstatic.com、static-s.iqiyi.com 被误拦会造成页面挂图裂。
+6. **功能域排除**：含 push / passport / login / uaa / doh / im / chat / subscription /
+   api / sdk 等功能词元、且无广告语义者剔除。**但豁免 ad 词根**
+   （advertising-api.amazon.com、api-adservices.apple.com 这类是真广告，
+   曾因词表缺 advertising / adservices 被误删 83 条）。
+7. **guard 冲突检测方向**：只查「guard 条目是否被产物覆盖」（guard ⊆ 产物）。
+   冲突时删除覆盖它的上层后缀域（DOMAIN-SUFFIX 无法排除单个子域）。
+8. **词边界匹配**：语义判定按 label 切分后的词元精确比对，禁止短词子串
+   （曾用裸 "ad"/"stat"/"log" 子串，误收 static / bdstatic / download / prologue）。
+9. 灰产判定用结构（孤立 1 条 + 无语义 + 形态随机），不用语义猜。
 
 断言（构建时自动执行，失败即非零退出）
 ======================================
-① 无 IP / CIDR / 通配 / 修饰符  ② 静态资源域为 0（除命名含广告语义者）
-③ MUST_CONTAIN 必需域全部在位    ④ 覆盖率不低于基线（拉 Jinx 作回归护栏）
-⑤ 规模护栏 [5000, 12000]         ⑥ 无重复
+① 无 IP / CIDR / 通配 / 修饰符        ② 静态资源域为 0（除命名含广告语义者）
+③ MUST_CONTAIN 必需域全部在位          ④ guard 条目不得被产物覆盖（一个都不能）
+⑤ 覆盖率不低于护栏                    ⑥ 规模护栏
+⑦ 无重复
 
 用法
 ====
@@ -53,7 +58,7 @@ BASE = "https://raw.githubusercontent.com/217heidai/adblockfilters/main/rules/"
 GUARD_URL = "https://raw.githubusercontent.com/RiverFlowsInUUU/Jinx/main/surge-direct.list"
 JINX_URL = "https://raw.githubusercontent.com/RiverFlowsInUUU/Jinx/main/mihomo-ads.yaml"
 
-LITE_FILE = "adblocksurgelite.list"          # A 支路：DOMAIN-SET 格式（每行 ".域名"）
+LITE_FILE = "adblocksurgelite.list"          # A 支路：DOMAIN-SET（每行 ".域名"）
 B_SOURCES = [                                 # B 支路：adblock 语法
     ("AWAvenue_Ads_Rule.txt", "AWAvenue"),
     ("CJX's_Annoyance_List.txt", "CJX"),
@@ -70,11 +75,12 @@ IPV4_RE = re.compile(r"^\d{1,3}(\.\d{1,3}){3}$")
 CIDR_RE = re.compile(r"/\d+$")
 BLOCK_RE = re.compile(r"^\|\|([a-z0-9._-]+)\^$")
 EXCEPT_RE = re.compile(r"^@@\|\|([a-z0-9._-]+)\^$")
+AD_ROOT_RE = re.compile(r"^(ad|ads|advert)", re.I)   # 广告词根，豁免功能域排除
 
-# 语义词元（label 级精确匹配，禁止短词子串）
 SEMANTIC = {
-    "ad", "ads", "adx", "adserv", "adserver", "adservice", "adsrv", "adpush",
-    "advert", "adverts", "advertise", "advertisement", "adview", "adlog",
+    "ad", "ads", "adx", "adserv", "adserver", "adservice", "adservices",
+    "adsrv", "adpush", "advert", "adverts", "advertise", "advertised",
+    "advertisement", "advertising", "advertiser", "adview", "adlog",
     "adcdn", "adclick", "adping", "adtrack", "adfile", "adsfile",
     "dsp", "ssp", "rtb", "cupid", "pangle", "pangolin", "gromore", "csj",
     "gdt", "pgdt", "tanx", "alimama", "mobads", "adkwai", "gskwai",
@@ -86,11 +92,20 @@ SEMANTIC = {
     "pcdn", "p2p", "peer", "stun", "turn",
     "deviceid", "oaid", "imei", "idfa", "oneid", "umid", "msaid",
 }
-# 平台名（子串安全：这些词不会构成普通英文单词）
 PLATFORM_SUBSTR = (
     "kwai", "pangolin", "pangle", "gromore", "mobads", "alimama",
     "bytedance", "snssdk", "toutiao", "umeng", "tanx", "cupid",
 )
+# 功能词元：出现且无广告语义/无 ad 词根 → 判定为功能域，剔除
+FUNCTION_TOKENS = {
+    "push", "upush", "passport", "login", "auth", "uaa", "oauth", "sso",
+    "account", "dns", "doh", "dot", "im", "chat", "message", "msg", "mail",
+    "static", "css", "img", "image", "pic", "photo", "video", "play", "player",
+    "media", "download", "upload", "file", "cdn", "update", "upgrade", "patch",
+    "config", "cfg", "captcha", "verify", "sms", "code", "pay", "wallet",
+    "order", "cart", "coupon", "search", "feed", "comment", "share", "live",
+    "room", "subscription", "member", "vip", "api", "sdk", "gateway", "openapi",
+}
 RESOURCE_PREFIX = ("static", "download", "sdownload", "status", "update", "upgrade")
 
 MUST_CONTAIN = [
@@ -99,7 +114,8 @@ MUST_CONTAIN = [
     "gdt.qq.com", "e.qq.com", "umeng.com", "alog.umeng.com",
     "ad.xiaomi.com", "analytics.126.net",
 ]
-COVERAGE_FLOOR = 0.68          # 对 Jinx·中国生态的覆盖率下限（回归护栏）
+COVERAGE_FLOOR = 0.90
+SIZE_RANGE = (5000, 15000)
 
 MULTI_SUFFIX = {
     "com.cn", "net.cn", "org.cn", "gov.cn", "edu.cn",
@@ -132,19 +148,33 @@ def has_semantic(d):
     return False
 
 
+def has_ad_root(d):
+    """label 以 ad / ads / advert 开头即视为广告词根（豁免功能域排除）。"""
+    return any(AD_ROOT_RE.match(lb) for lb in d.split(".")[:-1])
+
+
 def has_platform(d):
     return any(k in d for k in PLATFORM_SUBSTR)
 
 
-def is_resource(d):
+def has_function(d):
     for lb in d.split(".")[:-1]:
-        if lb.lower().startswith(RESOURCE_PREFIX):
-            return True
+        for t in label_tokens(lb):
+            if t in FUNCTION_TOKENS:
+                return True
     return False
 
 
+def is_function_domain(d):
+    """功能域：有功能词元，且既无广告语义、也无 ad 词根。"""
+    return has_function(d) and not has_semantic(d) and not has_ad_root(d)
+
+
+def is_resource(d):
+    return any(lb.lower().startswith(RESOURCE_PREFIX) for lb in d.split(".")[:-1])
+
+
 def is_gray_random(d, cluster_size, semantic):
-    """灰产长尾结构判据：孤立 1 条 + 无语义 + 形态随机（元音稀少且含数字）。"""
     if cluster_size >= 2 or semantic:
         return False
     b = registrable(d).split(".")[0]
@@ -214,6 +244,26 @@ def parse_adblock(text, stat):
     return out, exceptions
 
 
+def parse_jinx(text, stat):
+    out, regex_cnt = set(), 0
+    for l in text.splitlines():
+        l = l.strip()
+        if not l.startswith("- "):
+            continue
+        f = [x.strip() for x in l[2:].strip().strip("'\"").split(",")]
+        if len(f) < 2:
+            continue
+        if f[0] == "DOMAIN-SUFFIX":
+            if DOMAIN_RE.match(f[1]) and not IPV4_RE.match(f[1]):
+                out.add(f[1].lower())
+            else:
+                stat["形态非法/IP(剔除)"] += 1
+        elif f[0] == "DOMAIN-REGEX":
+            regex_cnt += 1
+    stat["DOMAIN-REGEX(通配,无法转后缀)"] = regex_cnt
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", required=True)
@@ -223,6 +273,7 @@ def main():
 
     stat_a = collections.Counter()
     stat_b = collections.OrderedDict()
+    stat_c = collections.Counter()
 
     # ── A 支路：lite ─────────────────────────────────────────
     try:
@@ -231,14 +282,6 @@ def main():
         print("下载 lite 失败: %s" % e, file=sys.stderr)
         return 2
     stat_a["原始"] = len(A)
-    cl_a = collections.Counter(registrable(d) for d in A)
-    res_a = {d for d in A if is_resource(d) and not has_semantic(d)}
-    gray_a = {d for d in A
-              if is_gray_random(d, cl_a[registrable(d)], has_semantic(d) or has_platform(d))}
-    A = A - res_a - gray_a
-    stat_a["静态资源(剔除)"] = len(res_a)
-    stat_a["灰产随机长尾(剔除)"] = len(gray_a)
-    stat_a["采用"] = len(A)
 
     # ── B 支路：5 源 ────────────────────────────────────────
     exceptions = set()
@@ -252,14 +295,8 @@ def main():
         doms, exc = parse_adblock(text, s)
         exceptions |= exc
         cl = collections.Counter(registrable(d) for d in doms)
-        keep = set()
-        for d in doms:
-            semantic = has_semantic(d) or has_platform(d)
-            if not (cl[registrable(d)] >= 2 or semantic):
-                continue
-            if is_resource(d) and not has_semantic(d):
-                continue
-            keep.add(d)
+        keep = {d for d in doms
+                if (cl[registrable(d)] >= 2 or has_semantic(d) or has_platform(d))}
         s["拦截 域名级(原始)"] = len(doms)
         s["准入后(采用)"] = len(keep)
         s["剔除"] = len(doms) - len(keep)
@@ -267,18 +304,46 @@ def main():
 
     B = set().union(*[v[0] for v in stat_b.values()])
 
-    # ── 合并与统一后处理 ────────────────────────────────────
-    merged = A | B
+    # ── C 支路：Jinx 3.2.3（仓内冻结，不会漂移）───────────────
+    try:
+        jtxt = http_get(JINX_URL)
+    except Exception as e:                                     # noqa: BLE001
+        print("下载 Jinx 失败: %s" % e, file=sys.stderr)
+        return 2
+    C = parse_jinx(jtxt, stat_c)
+    stat_c["原始"] = len(C)
+
+    # ── 合并 ───────────────────────────────────────────────
+    merged = A | B | C
+
+    # 后处理①：@@ 例外减法
     after_exc = {d for d in merged if not under(d, exceptions)}
     n_exc = len(merged) - len(after_exc)
 
+    # 后处理②：静态资源 / 功能域剔除
+    res_drop = {d for d in after_exc if is_resource(d) and not has_semantic(d)}
+    fn_drop = {d for d in after_exc if is_function_domain(d)}
+    after_fn = after_exc - res_drop - fn_drop
+    stat_a["静态资源(剔除)"] = len(res_drop)
+    stat_a["功能域(剔除)"] = len(fn_drop)
+
+    # 后处理③：灰产随机长尾（仅 A 支路来源，按合并后聚类判断）
+    cl = collections.Counter(registrable(d) for d in after_fn)
+    gray_drop = {d for d in after_fn
+                 if d in A and is_gray_random(d, cl[registrable(d)],
+                                              has_semantic(d) or has_platform(d))}
+    after_gray = after_fn - gray_drop
+    stat_a["灰产随机长尾(剔除)"] = len(gray_drop)
+
+    # 后处理④：语义上提
     climbed, climb_log = set(), []
-    for d in after_exc:
+    for d in after_gray:
         out, did = climb(d)
         climbed.add(out)
         if did:
             climb_log.append((d, out))
 
+    # 后处理⑤：guard 冲突（方向：guard 条目是否被产物覆盖）
     try:
         gtxt = http_get(GUARD_URL)
     except Exception as e:                                     # noqa: BLE001
@@ -292,24 +357,19 @@ def main():
         f = [x.strip() for x in line.split(",")]
         if len(f) >= 2:
             guard.add(f[1].lower())
-    collided = sorted(d for d in climbed if under(d, guard))
-    final = sorted(climbed - set(collided))
+    bad_guards = sorted(g for g in guard if under(g, climbed))
+    # 删除"覆盖了 guard 条目"的上层域（DOMAIN-SUFFIX 无法排除单个子域）
+    supersets = {d for d in climbed if any(under(g, {d}) for g in bad_guards)}
+    final = sorted(climbed - supersets)
 
-    # ── 覆盖率回归护栏（拉 Jinx 作基线）─────────────────────
+    # ── 覆盖率（对 Jinx·中国生态）───────────────────────────
     try:
-        js = set()
-        for l in http_get(JINX_URL).splitlines():
-            l = l.strip()
-            if l.startswith("- "):
-                f = [x.strip() for x in l[2:].strip().strip("'\"").split(",")]
-                if len(f) >= 2 and f[0] == "DOMAIN-SUFFIX":
-                    js.add(f[1].lower())
         cn_base = set()
         for l in http_get(BASE + "china.txt").splitlines():
             l = l.strip().lower().lstrip(".")
             if l and not l.startswith("#") and "." in l:
                 cn_base.add(registrable(l))
-        j_cn = [d for d in js if registrable(d) in cn_base]
+        j_cn = [d for d in C if registrable(d) in cn_base]
         fset_tmp = set(final)
         hit = sum(1 for d in j_cn if under(d, fset_tmp))
         coverage = hit / len(j_cn) if j_cn else 0.0
@@ -331,56 +391,69 @@ def main():
     _missing = [d for d in MUST_CONTAIN if d not in fset]
     if _missing:
         errs.append("产物缺失已知必需域：%s" % _missing)
+    _still = [g for g in guard if under(g, fset)]
+    if _still:
+        errs.append("guard 条目仍被产物覆盖 %d 条，例：%s" % (len(_still), _still[:3]))
     if coverage is not None and coverage < COVERAGE_FLOOR:
         errs.append("覆盖率 %.1f%% 低于护栏 %.0f%%" % (coverage * 100, COVERAGE_FLOOR * 100))
-    if not (5000 <= len(final) <= 12000):
-        errs.append("产物规模 %d 超出护栏 [5000, 12000]" % len(final))
+    if not (SIZE_RANGE[0] <= len(final) <= SIZE_RANGE[1]):
+        errs.append("产物规模 %d 超出护栏 %s" % (len(final), SIZE_RANGE))
     if len(final) != len(fset):
         errs.append("产物存在重复")
 
     # ── 输出 ───────────────────────────────────────────────
     hdr = [
         "# 中文广告 / 统计 / 隐私 / PCDN 域名规则集（由脚本生成，请勿手改）",
-        "# 生成器: test/build-cn-adblock.py",
+        "# 生成器: test/build-cn-adblock.py（v4 三支路）",
         "# 支路 A: 217heidai adblocksurgelite.list（全量 16 源 ∩ china.txt）",
         "# 支路 B: AWAvenue · CJX · xinggsf · AdGuard_Chinese_filter · jiekouAD",
+        "# 支路 C: 本仓 Jinx 3.2.3（上游已转加密发布，此快照冻结、不漂移）",
         "# 规矩: 仅 DNS 层可表达 · 纯 DOMAIN-SUFFIX 无通配 · 只拦域名不拦 IP",
-        "#       静态资源域硬排除 · @@ 例外只做减法不生成 DIRECT · 与 guard 冲突即剔除",
+        "#       静态资源/功能域硬排除 · @@ 例外只做减法 · guard 条目零覆盖",
         "# 规模: %d 条" % len(final),
     ]
-    audit = ["构建审计 / cn-adblock（v3 双支路）", "=" * 64, "", "一、A 支路（lite）"]
+    audit = ["构建审计 / cn-adblock（v4 三支路）", "=" * 64, "", "一、A 支路（lite）"]
     for k, v in stat_a.items():
-        audit.append("  %-24s %6d" % (k, v))
+        audit.append("  %-26s %6d" % (k, v))
     audit += ["", "二、B 支路（5 源）"]
     for label, (keep, s) in stat_b.items():
         audit.append("  [%s]" % label)
         for k, v in s.items():
             audit.append("    %-24s %6d" % (k, v))
+    audit += ["", "三、C 支路（Jinx 3.2.3）"]
+    for k, v in stat_c.items():
+        audit.append("  %-26s %6d" % (k, v))
     audit += [
         "",
-        "三、漏斗",
-        "  A 支路采用                  : %d" % len(A),
-        "  B 支路采用                  : %d" % len(B),
+        "四、漏斗",
+        "  A %d | B %d | C %d" % (len(A), len(B), len(C)),
         "  合并去重                    : %d" % len(merged),
-        "  扣除 @@ 域名级例外（%d 条）   : -%d" % (len(exceptions), n_exc),
+        "  @@ 例外减法（%d 条规则）      : -%d" % (len(exceptions), n_exc),
+        "  静态资源剔除                : -%d" % len(res_drop),
+        "  功能域剔除                  : -%d" % len(fn_drop),
+        "  灰产随机长尾剔除            : -%d" % len(gray_drop),
         "  语义上提后                  : %d" % len(climbed),
-        "  与 guard 冲突剔除（%d 条）    : -%d" % (len(collided), len(collided)),
+        "  guard 冲突剔除（上层域 %d 个） : -%d" % (len(supersets), len(supersets)),
         "  最终产物                    : %d" % len(final),
         "",
-        "四、覆盖率（回归护栏）",
+        "五、覆盖率（回归护栏）",
         "  Jinx·中国生态 %d 条 → 覆盖 %d 条 = %s"
         % (len(j_cn), hit, ("%.1f%%" % (coverage * 100)) if coverage is not None else "未测"),
         "",
-        "五、语义上提明细（%d 条）" % len(climb_log),
+        "六、guard 冲突处理",
     ]
+    if bad_guards:
+        for g in bad_guards:
+            owners = sorted(d for d in supersets if under(g, {d}))
+            audit.append("  %-42s ← 被上层域覆盖，已删除 %s" % (g, owners))
+    else:
+        audit.append("  无")
+    audit += ["", "七、语义上提明细（%d 条）" % len(climb_log)]
     for src, dst in sorted(climb_log):
         audit.append("  %-46s -> %s" % (src, dst))
-    audit += ["", "六、与 guard 白名单冲突（已剔除，%d 条）" % len(collided)]
-    for d in collided:
-        audit.append("  " + d)
-    audit += ["", "七、断言"]
+    audit += ["", "八、断言"]
     audit += ["  FAIL " + e for e in errs] or [
-        "  PASS 形态 / 静态资源 / 必需域 / 覆盖率 / 规模 / 无重复 —— 全部通过"]
+        "  PASS 形态 / 静态资源 / 必需域 / guard 零覆盖 / 覆盖率 / 规模 / 无重复 —— 全部通过"]
 
     if args.dry_run:
         print("\n".join(audit))
