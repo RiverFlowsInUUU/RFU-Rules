@@ -18,6 +18,16 @@
 # rmonitor.qq.com   腾讯广告监控上报端点。收录于 anti-AD 与 1Hosts Lite。
 #                   既不在上游黑名单、也不在其白名单 —— 干净的追加。
 #
+# jiguang.aimaiot.cn  爱玛出行（UA `aima_travel`）的极光埋点上报通道，
+#                   落在华为云 116.63.35.74:8089，明文 HTTP POST /up，
+#                   请求体 gzip+base64（protobuf 埋点包），回执 {"code":200}，
+#                   启动时连发数次、之后约每 20 秒一次心跳。
+#                   依据：2026-10-28 用户实机抓包（ProxyPin HAR，111 条中
+#                   该端点占 10 条，UA 自证归属）。
+#                   ⚠️ 与爱玛 App 的每日弹窗无关 —— 该弹窗已实测排除此通道
+#                   （拦掉后照弹），本条只负责断埋点上报，不声称去弹窗。
+#                   ⚠️ 精确到子域，不碰 aimaiot.cn 主域（那是 App 主 API）。
+#
 # 2026-09-22 移除 2 条（留痕：曾收录 → 为什么错 → 已回退）
 #   msg.qy.net        2026-09-19 以「爱奇艺视频广告素材 CNAME 出口」收录；
 #                     复核发现它在上游 whitelist.txt 里，上游明确放行。
@@ -29,3 +39,4 @@
 #   而不是在这里单方面覆盖。
 
 rmonitor.qq.com
+jiguang.aimaiot.cn
