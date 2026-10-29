@@ -54,7 +54,7 @@ A 8480  +  B 1392  +  C 3815
 
 📌 因此产物里仍有 93 条形态随机的域名（占 1.0%），其中 40 条来自 C 支路。这是有意的取舍：宁可留一点噪声，不动可信源的判断。
 
-🧩 **白名单怎么来的**：上游白名单（324 条）中会被黑名单命中的 **44 条**，加 **5 条**手工补充（`*.tange365.com`，「小鲸看看」相机 App 的账户 / 设备 / 云存储域；`*.wechatos.net`，用户指定放行；`*.za.group`，众安银行 App 业务域，2026-10-10 实测；`*.itunes.apple.com`，用户指定「任何前缀 + itunes.apple.com」直连；`*.aspect-upush.umeng.com`，友盟推送建连入口，2026-10-27 追加），共 49 条。
+🧩 **白名单怎么来的**：上游白名单（324 条）中会被黑名单命中的 **44 条**，加 **5 条**手工补充（`*.tange365.com`，「小鲸看看」相机 App 的账户 / 设备 / 云存储域；`*.wechatos.net`，用户指定放行；`*.za.group`，众安银行 App 业务域，2026-10-10 实测；`*.itunes.apple.com`，用户指定「任何前缀 + itunes.apple.com」直连；`*.aspect-upush.umeng.com`，友盟推送建连入口，2026-10-27 追加），共 50 条。
 
 ⚖️ 白名单的对照面是**上游黑名单** —— 生成时不把 `custom-*.list` 算进去，所以手工追加的域名**不会**因为「上游已放行」而被白名单豁免。跟上游白名单对着干等于静默误杀，这条前提见 [`skill/SKILL.md`](../skill/SKILL.md)。
 
@@ -64,11 +64,11 @@ A 8480  +  B 1392  +  C 3815
 | 客户端 | 文件 | 格式 | 条数 | 用途 |
 |:-------|:-----|:-----|-----:|:-----|
 | mihomo / OpenClash | `mihomo-ads.yaml` | `classical` | 9141 | 拦截 |
-| mihomo / OpenClash | `mihomo-direct.yaml` | `classical` | 49 | 放行 |
+| mihomo / OpenClash | `mihomo-direct.yaml` | `classical` | 50 | 放行 |
 | Surge / Egern | `surge-ads.list` | `RULE-SET` / `rule_set` | 9141 | 拦截 |
-| Surge / Egern | `surge-direct.list` | `RULE-SET` / `rule_set` | 49 | 放行 |
+| Surge / Egern | `surge-direct.list` | `RULE-SET` / `rule_set` | 50 | 放行 |
 | sing-box | `sing-box-ads.json` | `source` | 9141 | 拦截 |
-| sing-box | `sing-box-direct.json` | `source` | 49 | 放行 |
+| sing-box | `sing-box-direct.json` | `source` | 50 | 放行 |
 
 🔵 **Egern 复用 Surge 那份文件**：两者规则集格式同源（`DOMAIN-SUFFIX` / `DOMAIN` 逐字相同），无需独立产物。引用位置有两处：`rules` 段的 `rule_set`（连接阶段）、`forward` 段的 `proxy_rule_set`（DNS 阶段）。依据：姊妹仓 [Self-Configuration](https://github.com/RiverFlowsInUUU/Self-Configuration) 四份现役 Egern profile 均如此引用，并将这两份登记为「共用规则集」。
 

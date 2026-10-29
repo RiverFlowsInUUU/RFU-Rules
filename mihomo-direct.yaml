@@ -1,8 +1,8 @@
 # auto-converted by adblock-ruleset-port
 # source: upstream/jinx-3.2.3
 # mode: exact
-# entries: 49
-# extra-white: custom-direct.list(5)
+# entries: 50
+# extra-white: custom-direct.list(6)
 payload:
   - 'DOMAIN,gm.mmstat.com'
   - 'DOMAIN,wgo.mmstat.com'
@@ -53,3 +53,4 @@ payload:
   - 'DOMAIN-SUFFIX,za.group'
   - 'DOMAIN-SUFFIX,itunes.apple.com'
   - 'DOMAIN-SUFFIX,aspect-upush.umeng.com'
+  - 'DOMAIN-SUFFIX,whalevt-link.com'

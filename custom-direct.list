@@ -49,8 +49,14 @@
 #                 改用顺序保护 —— 本条目更具体，direct 排在拦截集之前，先命中 DIRECT。
 #                 📌 与 tanx.com / getui.net 同一类处理，勿改成从拦截集里抠。
 #
+# *.whalevt-link.com  用户指定放行。2026-10-29 追加。
+#                 语义 = DOMAIN-SUFFIX,whalevt-link.com（裸域 + 全部子域一并直连）。
+#                 实解析 120.79.171.133（阿里云杭州），非广告域，上游六源未收录，
+#                 也未与拦截集冲突 —— 干净的直连追加。
+#
 *.tange365.com
 *.wechatos.net
 *.za.group
 *.itunes.apple.com
 *.aspect-upush.umeng.com
+*.whalevt-link.com
