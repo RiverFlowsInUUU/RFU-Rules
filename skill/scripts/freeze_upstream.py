@@ -136,9 +136,9 @@ def manifest_path() -> Path:
     return UPSTREAM / "manifest.json"
 
 
-def build_manifest(rows: list[dict]) -> dict:
+def build_manifest(rows: list[dict], frozen_at: str | None = None) -> dict:
     return {
-        "frozen_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+        "frozen_at": frozen_at or datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
         "policy": "上游快照落盘，构建只读 upstream/，不联网。jinx 钉死 3.2.3，"
                   "其余源每周由定时工作流刷新。要更新跑 "
                   "skill/scripts/freeze_upstream.py。",
@@ -147,6 +147,26 @@ def build_manifest(rows: list[dict]) -> dict:
         "jinx_commit": JINX_COMMIT,
         "sources": rows,
     }
+
+
+def _keep_frozen_at(rows: list[dict]) -> str | None:
+    """内容零变化时沿用上一次的「取用时间」，有变化才刷新。
+
+    否则每次跑都会刷新 frozen_at，manifest.json 与 MANIFEST.md 必然产生 diff，
+    工作流第 ③ 步的「无 diff 静默结束」永远走不到 —— 周更会退化成每周一次
+    的空提交（2026-11-02 实测：上游零变化仍提交了 2 行时间戳）。
+    """
+    p = manifest_path()
+    if not p.exists():
+        return None
+    try:
+        prev = json.loads(read_text(p))
+        old = {(s["path"], s["sha256"]) for s in prev.get("sources", [])}
+    except (ValueError, KeyError, TypeError):
+        return None
+    if old and old == {(s["path"], s["sha256"]) for s in rows}:
+        return prev.get("frozen_at")
+    return None
 
 
 def cmd_list() -> int:
@@ -202,7 +222,7 @@ def cmd_freeze() -> int:
                   "再跑一次；不要靠加 retry 硬扛 —— 404 是永久错，重试没有意义。")
         return EXIT_FAIL
 
-    mf = build_manifest(rows)
+    mf = build_manifest(rows, _keep_frozen_at(rows))
     write_text(manifest_path(), json.dumps(mf, ensure_ascii=False, indent=2) + "\n")
     write_text(UPSTREAM / "MANIFEST.md", render_manifest_md(mf))
     print("\n冻结完成：%d 个文件 → upstream/（manifest.json + MANIFEST.md 已更新）" % len(rows))
