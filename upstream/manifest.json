@@ -1,5 +1,5 @@
 {
-  "frozen_at": "2026-11-01T23:59:24+00:00",
+  "frozen_at": "2026-11-02T02:29:41+00:00",
   "policy": "上游快照落盘，构建只读 upstream/，不联网。jinx 钉死 3.2.3，其余源每周由定时工作流刷新。要更新跑 skill/scripts/freeze_upstream.py。",
   "hash_basis": "bytes 与 sha256 均按换行归一化（LF）后的文本计算，与仓库内 .gitattributes 的 eol=lf 一致。",
   "jinx_commit": "c85751d",
