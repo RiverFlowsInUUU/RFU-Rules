@@ -11,7 +11,7 @@
 源策略分两档（2026-10-27 起）：
   · jinx：钉死。上游自 3.2.4 转为加密发布（new-rules/*.enc，需接收方私钥），
     明文 rules/ 停在 3.2.3 —— 用 JINX_COMMIT 钉住，任何情况下不动。
-  · 其余五个中文源：活源。由每周定时工作流
+  · 其余七个源（217heidai ×2 + 中文源 ×5）：活源。由每周定时工作流
     （.github/workflows/update.yml）刷新，也可手动跑；任一源抓取失败
     即不落盘 manifest、退出非零，仓内不会出现半新半旧的快照。
 
@@ -56,7 +56,20 @@ UPSTREAM = ROOT / "upstream"
 JINX_COMMIT = "c85751d"
 JINX_RAW = "https://raw.githubusercontent.com/VME98/jinx-rules/%s/rules/" % JINX_COMMIT
 
-_ADB = "https://raw.githubusercontent.com/217heidai/adblockfilters/main/rules/"
+# ⚠️ 217heidai/adblockfilters 于 2026-10-29 完成存储结构调整（上游 commit aa65689
+#    "chore: 规则改由 GitHub Releases 分发，仓库仅保留源码"）：规则文件不再提交到
+#    Git 仓库，改由三个滚动 Release 分发 ——
+#      rule   = 该仓自己生成的合并规则（adblocksurgelite.list 等，每 8h 刷新）
+#      source = 它聚合的上游第三方清单（AdGuard 中文 / 秋风 / jiekouAD / CJX / xinggsf）
+#      domain = 过程文件（china.txt 等）
+#    旧的 raw.githubusercontent.com/.../main/rules/ 有两个坑，都不能再用：
+#      ① 大部分文件已被删除（china.txt 于 29730b0 删除），请求直接 404；
+#      ② 少数仍在的文件被冻结在 2026-10-29 那次提交，取到的是过期数据 ——
+#         静默失真比 404 更危险（仓内会「成功」记下一份不动的旧快照）。
+#    故一律改走 release 资产。
+_ADB_RULE = "https://github.com/217heidai/adblockfilters/releases/download/rule/"
+_ADB_SOURCE = "https://github.com/217heidai/adblockfilters/releases/download/source/"
+_ADB_DOMAIN = "https://github.com/217heidai/adblockfilters/releases/download/domain/"
 
 # (分组, 目标相对路径, URL, 说明)
 SOURCES = [
@@ -67,15 +80,17 @@ SOURCES = [
     ("jinx-3.2.3", "whitelist_wildcard.txt", JINX_RAW + "whitelist_wildcard.txt", "上游白名单通配"),
     ("jinx-3.2.3", "version.json", JINX_RAW + "version.json", "上游版本自述"),
     # ── 217heidai：支路 A 的来源与其筛选器 ──────────────────────────
-    ("217heidai", "adblocksurgelite.list", _ADB + "adblocksurgelite.list",
+    ("217heidai", "adblocksurgelite.list", _ADB_RULE + "adblocksurgelite.list",
      "16 源聚合后 ∩ china.txt 的 lite 档（DOMAIN-SET 格式）"),
-    ("217heidai", "china.txt", _ADB + "china.txt", "中国域名清单（判定「中国生态」的基准）"),
+    ("217heidai", "china.txt", _ADB_DOMAIN + "china.txt", "中国域名清单（判定「中国生态」的基准）"),
     # ── 中文广告源：支路 B ─────────────────────────────────────────
-    ("cn", "AdGuard_Chinese_filter.txt", _ADB + "AdGuard_Chinese_filter.txt", "AdGuard 官方中文过滤器"),
-    ("cn", "AWAvenue_Ads_Rule.txt", _ADB + "AWAvenue_Ads_Rule.txt", "秋风广告规则"),
-    ("cn", "jiekouAD.txt", _ADB + "jiekouAD.txt", "接口广告源（灰产长尾多，靠准入规则滤）"),
-    ("cn", "CJX_Annoyance_List.txt", _ADB + "CJX's_Annoyance_List.txt", "CJX 中文骚扰+广告"),
-    ("cn", "xinggsf_mv.txt", _ADB + "xinggsf_mv.txt", "xinggsf（优酷等）"),
+    # 上游把 CJX's 的撇号换成了点（CJX.s_Annoyance_List.txt）—— 撇号在 URL 里
+    # 是保留字符，旧名只能靠手工编码才抓得到。本地文件名保持不变（下游按名读）。
+    ("cn", "AdGuard_Chinese_filter.txt", _ADB_SOURCE + "AdGuard_Chinese_filter.txt", "AdGuard 官方中文过滤器"),
+    ("cn", "AWAvenue_Ads_Rule.txt", _ADB_SOURCE + "AWAvenue_Ads_Rule.txt", "秋风广告规则"),
+    ("cn", "jiekouAD.txt", _ADB_SOURCE + "jiekouAD.txt", "接口广告源（灰产长尾多，靠准入规则滤）"),
+    ("cn", "CJX_Annoyance_List.txt", _ADB_SOURCE + "CJX.s_Annoyance_List.txt", "CJX 中文骚扰+广告"),
+    ("cn", "xinggsf_mv.txt", _ADB_SOURCE + "xinggsf_mv.txt", "xinggsf（优酷等）"),
     # 「独立第二覆盖率基线」方案（v11 审查 3.1，AdGuard DNS filter）经实测否决：
     # 该列表是国际通用向，与 CN 向产物仅 3.1% 交集、CN 子集仅 17 条，无统计力。
     # 改用 build_ads 的「B 支路采纳率带宽 + 单源哨兵」直接守准入判据本身。
@@ -176,6 +191,15 @@ def cmd_freeze() -> int:
         print("\n❌ 以下源抓取失败，未落盘：")
         for n, e in failed:
             print("   %-46s %s" % (n, e))
+        # 2026-10-29 的教训：上游把 raw 路径整体改成 Release 分发，六个源同时 404，
+        # 但报错只说「HTTP Error 404」，看不出是「一家上游改了仓库结构」。
+        # 同源批量 404 时把话说明白，省下一次从头排查。
+        n404 = sum(1 for _, e in failed if "404" in e)
+        if n404 >= 3:
+            print("\n💡 提示：%d 个源同时 404，通常是**同一家上游改了仓库结构**（删文件 /"
+                  "改路径 / 改由 Release 分发），而不是这些列表停更。" % n404)
+            print("   处理：去上游仓库看 README 与最近提交，确认新地址后改本脚本的 SOURCES，"
+                  "再跑一次；不要靠加 retry 硬扛 —— 404 是永久错，重试没有意义。")
         return EXIT_FAIL
 
     mf = build_manifest(rows)

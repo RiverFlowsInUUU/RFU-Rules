@@ -1,5 +1,5 @@
 {
-  "frozen_at": "2026-10-27T14:50:11+00:00",
+  "frozen_at": "2026-11-01T23:59:24+00:00",
   "policy": "上游快照落盘，构建只读 upstream/，不联网。jinx 钉死 3.2.3，其余源每周由定时工作流刷新。要更新跑 skill/scripts/freeze_upstream.py。",
   "hash_basis": "bytes 与 sha256 均按换行归一化（LF）后的文本计算，与仓库内 .gitattributes 的 eol=lf 一致。",
   "jinx_commit": "c85751d",
@@ -52,34 +52,34 @@
     {
       "group": "217heidai",
       "path": "217heidai/adblocksurgelite.list",
-      "url": "https://raw.githubusercontent.com/217heidai/adblockfilters/main/rules/adblocksurgelite.list",
-      "sha256": "d2afb6271e044f5f3d52f8196b79524a2d7267908905376b81ca5ec8f40f7e94",
-      "bytes": 163285,
-      "lines": 8519,
+      "url": "https://github.com/217heidai/adblockfilters/releases/download/rule/adblocksurgelite.list",
+      "sha256": "70d56affc086392ac9ee146b0489f0ba7e16f31a1151dee2163e94bcad5e0914",
+      "bytes": 120788,
+      "lines": 5791,
       "note": "16 源聚合后 ∩ china.txt 的 lite 档（DOMAIN-SET 格式）"
     },
     {
       "group": "217heidai",
       "path": "217heidai/china.txt",
-      "url": "https://raw.githubusercontent.com/217heidai/adblockfilters/main/rules/china.txt",
-      "sha256": "168c85896ccdd6e542a377c36137cb548a3d220bc7a932fbd42d5a182e0e0c05",
-      "bytes": 208868,
-      "lines": 12205,
+      "url": "https://github.com/217heidai/adblockfilters/releases/download/domain/china.txt",
+      "sha256": "238ec9b5fbf3be1660d4b0d055778cd54b2889a89598c5d26a51cd1425ed7c23",
+      "bytes": 172263,
+      "lines": 9641,
       "note": "中国域名清单（判定「中国生态」的基准）"
     },
     {
       "group": "cn",
       "path": "cn/AdGuard_Chinese_filter.txt",
-      "url": "https://raw.githubusercontent.com/217heidai/adblockfilters/main/rules/AdGuard_Chinese_filter.txt",
-      "sha256": "2eaf1884082c26a40339cfa9318a653c01d0863c09b84bebb8f84f294925b62c",
-      "bytes": 733090,
-      "lines": 21111,
+      "url": "https://github.com/217heidai/adblockfilters/releases/download/source/AdGuard_Chinese_filter.txt",
+      "sha256": "32ecde77b298b4b88b73263c1617828468a3c89f70520569a70a77c9b69207a1",
+      "bytes": 735247,
+      "lines": 21182,
       "note": "AdGuard 官方中文过滤器"
     },
     {
       "group": "cn",
       "path": "cn/AWAvenue_Ads_Rule.txt",
-      "url": "https://raw.githubusercontent.com/217heidai/adblockfilters/main/rules/AWAvenue_Ads_Rule.txt",
+      "url": "https://github.com/217heidai/adblockfilters/releases/download/source/AWAvenue_Ads_Rule.txt",
       "sha256": "fdf930d67659f6f1405c81e67c1fb7797145c54296c5ba0398729aa4d846808c",
       "bytes": 23470,
       "lines": 984,
@@ -88,7 +88,7 @@
     {
       "group": "cn",
       "path": "cn/jiekouAD.txt",
-      "url": "https://raw.githubusercontent.com/217heidai/adblockfilters/main/rules/jiekouAD.txt",
+      "url": "https://github.com/217heidai/adblockfilters/releases/download/source/jiekouAD.txt",
       "sha256": "928110a951fcd0742ac622f9606e5ed5d44ee964375cadafa6cbd5f7c039c6ae",
       "bytes": 129213,
       "lines": 5379,
@@ -97,7 +97,7 @@
     {
       "group": "cn",
       "path": "cn/CJX_Annoyance_List.txt",
-      "url": "https://raw.githubusercontent.com/217heidai/adblockfilters/main/rules/CJX's_Annoyance_List.txt",
+      "url": "https://github.com/217heidai/adblockfilters/releases/download/source/CJX.s_Annoyance_List.txt",
       "sha256": "f5afcf694eb62c42bdaa1294915f10a78577d1005c8d7a13b61a4808ccddb528",
       "bytes": 57229,
       "lines": 1840,
@@ -106,7 +106,7 @@
     {
       "group": "cn",
       "path": "cn/xinggsf_mv.txt",
-      "url": "https://raw.githubusercontent.com/217heidai/adblockfilters/main/rules/xinggsf_mv.txt",
+      "url": "https://github.com/217heidai/adblockfilters/releases/download/source/xinggsf_mv.txt",
       "sha256": "1165b91dd489b438c1d99de65c259d15cf5c406b2d8bfcebdb3aa794f129ebf8",
       "bytes": 6533,
       "lines": 160,
