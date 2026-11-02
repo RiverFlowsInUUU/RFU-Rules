@@ -34,6 +34,7 @@ import json
 import os
 import sys
 import time
+import urllib.error
 import urllib.request
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -106,6 +107,10 @@ def http_get(url: str, attempts: int = 3) -> str:
 
     attempts=3，间隔 2s / 4s；全部失败抛最后一个异常，由调用方按源粒度
     记入 failed（任一源失败 ⇒ 不落盘 manifest ⇒ 工作流失败 ⇒ 不提交）。
+
+    4xx 不重试（429 除外）：404 是「地址没了」的永久错，退避 6 秒只是白等。
+    2026-11-02 那次 6 源同时 404，12 个源 × 3 次重试让步骤① 多跑了 20 余秒，
+    日志被重试噪声撑长，反而看不清「是同一家上游改了结构」。
     """
     last: Exception = RuntimeError("unreachable")
     for i in range(attempts):
@@ -113,6 +118,12 @@ def http_get(url: str, attempts: int = 3) -> str:
             req = urllib.request.Request(url, headers={"User-Agent": UA})
             with urllib.request.urlopen(req, timeout=120) as r:
                 return r.read().decode("utf-8", "replace")
+        except urllib.error.HTTPError as e:
+            last = e
+            if 400 <= e.code < 500 and e.code != 429:
+                raise                                        # 永久错，立即上抛
+            if i < attempts - 1:
+                time.sleep(2 ** (i + 1))
         except Exception as e:                                   # noqa: BLE001
             last = e
             if i < attempts - 1:
@@ -217,7 +228,7 @@ def cmd_freeze() -> int:
         n404 = sum(1 for _, e in failed if "404" in e)
         if n404 >= 3:
             print("\n💡 提示：%d 个源同时 404，通常是**同一家上游改了仓库结构**（删文件 /"
-                  "改路径 / 改由 Release 分发），而不是这些列表停更。" % n404)
+                  " 改路径 / 改由 Release 分发），而不是这些列表停更。" % n404)
             print("   处理：去上游仓库看 README 与最近提交，确认新地址后改本脚本的 SOURCES，"
                   "再跑一次；不要靠加 retry 硬扛 —— 404 是永久错，重试没有意义。")
         return EXIT_FAIL
