@@ -8549,7 +8549,10 @@
         "zen-core-fr.allawnos.com",
         "zen-core-in.allawnos.com",
         "zen-core-sg.allawnos.com",
-        "zen-core-us.allawnos.com"
+        "zen-core-us.allawnos.com",
+        "pcdn.biliapi.net",
+        "mcdn.bilivideo.cn",
+        "mountaintoys.cn"
       ]
     }
   ]

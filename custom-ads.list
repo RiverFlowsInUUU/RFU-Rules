@@ -423,3 +423,24 @@ zen-core-fr.allawnos.com
 zen-core-in.allawnos.com
 zen-core-sg.allawnos.com
 zen-core-us.allawnos.com
+
+# ────────────────────────────────────────────────────────────────
+# 2026-11-07 补 3 条 B 站 PCDN 节点（用户指定）
+#
+# 取舍：主动拒绝 PCDN 分发。拦掉后视频回落到主站 CDN（upos 等），
+#       部分网络下首帧与拖拽会变慢 —— 这是有意的取舍，不是误拦。
+#
+# pcdn.biliapi.net     原规则为 DOMAIN-WILDCARD,*pcdn*.biliapi.net。
+#                      本仓产物零通配，降级为后缀近似：覆盖 pcdn.biliapi.net
+#                      及其全部子域，覆盖不到「pcdn 夹在中间」的形态。
+#                      整域拦 biliapi.net 会连带打死播放器接口，不做。
+#
+# mcdn.bilivideo.cn    与本仓已有的 mcdn.bilivideo.com（来自上游 217heidai）
+#                      同族。同一服务的两个后缀只收一个会漏，补齐。
+#
+# mountaintoys.cn      上游七源均无收录。
+# ────────────────────────────────────────────────────────────────
+
+pcdn.biliapi.net
+mcdn.bilivideo.cn
+mountaintoys.cn

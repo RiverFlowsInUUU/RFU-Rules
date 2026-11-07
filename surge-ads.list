@@ -1,8 +1,8 @@
 # auto-converted by adblock-ruleset-port
 # source: upstream/(A+B+C) · jinx 3.2.3 (2026-10-18)
 # mode: suffix
-# entries: 8547
-# extra: custom-ads.list(365)
+# entries: 8550
+# extra: custom-ads.list(368)
 DOMAIN-SUFFIX,0001-metrics1-drcn-dt-dbankcloud-cn.geac.dbankedge.cn
 DOMAIN-SUFFIX,0002-metrics1-drcn-dt-dbankcloud-cn.geac.dbankedge.cn
 DOMAIN-SUFFIX,036e.cn
@@ -8550,3 +8550,6 @@ DOMAIN-SUFFIX,zen-core-fr.allawnos.com
 DOMAIN-SUFFIX,zen-core-in.allawnos.com
 DOMAIN-SUFFIX,zen-core-sg.allawnos.com
 DOMAIN-SUFFIX,zen-core-us.allawnos.com
+DOMAIN-SUFFIX,pcdn.biliapi.net
+DOMAIN-SUFFIX,mcdn.bilivideo.cn
+DOMAIN-SUFFIX,mountaintoys.cn
