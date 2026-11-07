@@ -26,6 +26,8 @@
 | B | AdGuard Chinese · 秋风 · jiekouAD · CJX · xinggsf | 1392 | 国内 App 广告的一手来源，含 A 支路漏掉的平台主域 |
 | C | Jinx `3.2.3` 明文快照 | 3815 | A/B 缺的国际广告网络与长尾，补齐召回 |
 
+➕ 三支路之外还有 [`custom-ads.list`](../custom-ads.list)：手工条目 2 条，加 **2026-11-07 一次性导入的设备遥测切片 363 条**（取 hagezi `native.{xiaomi,oppo-realme,vivo,huawei}` 与其 `multi` 基线的交集，再剔除本仓已覆盖项与静态资源 / 登录 / 推送 / OTA / 短信类）。该批**不参与 A/B 支路的准入判据，也不跟随上游更新**；取舍理由记在 [CHANGELOG](../CHANGELOG.md)。
+
 🔢 合成漏斗（2026-10-27 取值）：
 
 ```
@@ -255,8 +257,8 @@ RFU-Rules/
 | 项 | 值 |
 |:---|:---|
 | 📦 上游 | [`VME98/jinx-rules`](https://github.com/VME98/jinx-rules) · 数据 `3.2.3` · `2026-10-18` |
-| 🧩 数据源 | `217heidai/adblockfilters` · AdGuard Chinese · 秋风 AWAvenue · CJX · xinggsf · jiekouAD |
-| 📜 上游许可 | 均未声明（`license: null`） |
+| 🧩 数据源 | `217heidai/adblockfilters` · AdGuard Chinese · 秋风 AWAvenue · CJX · xinggsf · jiekouAD · hagezi（仅设备遥测切片，一次性导入） |
+| 📜 上游许可 | 多数为 **GPL-3.0**（217heidai / 秋风 / AdGuard 系 / hagezi）与 **LGPL-3.0**（CJX）；jinx、xinggsf、jiekouAD 未声明。逐项核实见 [NOTICE](../NOTICE.md) |
 | 📄 规则数据 | 版权归各上游及其原始来源，不主张任何权利 |
 | 🧪 `skill/` | 构建脚本与方法论，不含上游数据，可自由取用、修改、再分发 |
 

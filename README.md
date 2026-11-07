@@ -161,7 +161,7 @@ DNS 层拒答（可选）与组名改法见[详情](DetailsReadme/DetailsReadme.
 
 | | | |
 |:--|:--|:--|
-| 🚫 拦截 | **8547 条** | 广告 · 统计 · 隐私采集 · PCDN；灰产在构建时就被排除 |
+| 🚫 拦截 | **8547 条** | 广告 · 统计 · 隐私采集（含设备遥测） · PCDN；灰产在构建时就被排除 |
 | ✅ 放行 | **50 条** | 43 条精确 + 7 条后缀（含 6 条手工补充） |
 | 🧩 同源 | 四端逐条等价 | 换客户端不换名单 |
 | 🪶 轻量 | 纯域名后缀 | 无通配 · 无正则 · 无 IP，软路由与手机都跑得动 |
@@ -180,7 +180,7 @@ DNS 层拒答（可选）与组名改法见[详情](DetailsReadme/DetailsReadme.
 
 ## 📚 来源
 
-本仓站在七个上游的肩上，名单如下 —— 各归其位，皆可溯源：
+本仓站在八个上游的肩上，名单如下 —— 各归其位，皆可溯源：
 
 | 来源 | 本仓取用 |
 |:--|:--|
@@ -191,8 +191,11 @@ DNS 层拒答（可选）与组名改法见[详情](DetailsReadme/DetailsReadme.
 | [cjx82630/cjxlist](https://github.com/cjx82630/cjxlist) | CJX's Annoyance List · 中文骚扰补充 |
 | [xinggsf/Adblock-Plus-Rule](https://github.com/xinggsf/Adblock-Plus-Rule) | 视频广告规则 |
 | [damengzhu/banad](https://github.com/damengzhu/banad) | jiekouAD · 接口广告收集 |
+| [hagezi/dns-blocklists](https://github.com/hagezi/dns-blocklists) | 设备遥测切片 · `native.{xiaomi,oppo-realme,vivo,huawei}` ∩ 其 Normal 基线 · **一次性导入 `363` 条**（2026-11-07），不跟随更新 · GPL-3.0 |
 
-快照全部落盘在 `upstream/`，构建不联网。数据版权归各上游，本仓不主张；任一上游作者有异议，开 issue 即下架对应来源。
+前七个源的快照全部落盘在 `upstream/`，构建不联网；hagezi 的那 363 条是一次性人工导入，直接写在
+[`custom-ads.list`](custom-ads.list)，不占快照、不进周更。数据版权归各上游，本仓不主张；
+任一上游作者有异议，开 issue 即下架对应来源。
 
 ---
 
