@@ -12,6 +12,13 @@
 | 秋风 AWAvenue | `TG-Twilight/AWAvenue-Ads-Rule` | **GPL-3.0** |
 | CJX Annoyance | `cjx82630/cjxlist` | **LGPL-3.0** |
 | AdGuard 系 / xinggsf / jiekouAD | 对应上游仓 | xinggsf / jiekouAD 未声明；AdGuard 系（`AdguardTeam/*`）为 GPL-3.0 |
+| hagezi Native Tracker（**一次性切片导入**，见下） | `hagezi/dns-blocklists` | **GPL-3.0**（原文：*A copy of the license … has to accompany any redistribution*） |
+
+> **关于 hagezi 切片（2026-11-07）**：`custom-ads.list` 中 363 条批量条目取自
+> `hagezi/dns-blocklists` 的 `wildcard/native.{xiaomi,oppo-realme,vivo,huawei}-onlydomains.txt`，
+> 与该仓 `wildcard/multi-onlydomains.txt` 取交集后，剔除静态资源与登录/推送/OTA/短信等功能面条目。
+> 这批条目衍生自 GPL-3.0 数据，**按 GPL-3.0 再分发**；GPL 全文见上游仓库 `LICENSE`。
+> 该切片是**一次性快照**，不进入周更，不随上游自动更新。
 
 - 🚫 **本仓不主张对规则数据的任何权利**，也不对其准确性、完整性、时效性作任何担保。
 - ⚖️ **许可事实（v11 审查 3.5 修正）**：多数上游数据为 **GPL-3.0 / LGPL-3.0**，
