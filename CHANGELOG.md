@@ -4,6 +4,42 @@
 
 ---
 
+## 2026-11-07（六）· custom-ads 并入 hagezi 国产 ROM 遥测切片（8184 → 8547）
+
+> 决策由来：先评估「hagezi/dns-blocklists 是否该整体作为上游」，实测否决；
+> 只取其设备遥测切片中与 Normal 基线交集的部分，作**一次性快照**并入 `custom-ads.list`。
+
+**取用口径**
+
+- 源：`wildcard/native.{xiaomi,oppo-realme,vivo,huawei}-onlydomains.txt`
+  ∩ `wildcard/multi-onlydomains.txt`（2026-11-07 09:05 UTC 快照）。
+- 漏斗：全量 1,219 → 与 Normal 基线交集 761 → 剔本仓已覆盖 370 →
+  净新增 391 → 过闸实收 **363**。
+- 剔除 28 条（三类有重叠）：规矩 5 静态前缀 3 条 · 规矩 6 功能词元 17 条 ·
+  功能硬词 14 条（`auth.api.gitv.tv`、`api.sms.intl.miui.com`、
+  `ota.cdn.pandora.xiaomi.com`、`sms-ads-*.heytapmobile.com` 等）。
+- 与 `direct` 放行清单：精确冲突 **0**、父域遮蔽 **0**。
+
+**为什么不作为上游（留证，避免重复评估）**
+
+- **整体接入不成立**：light 115,169 条（现集 14 倍），与放行清单 **11 条正面冲突**
+  （`gm.mmstat.com` / `wgo.mmstat.com` 族、`cactus.jd.com`、`tnc3-*.snssdk.com`、
+  `appcfg.v.qq.com` 等登录与推送端点），且 multi 反向已覆盖本仓 63.6% —— 是替换而非增量。
+- **「跟他的上游」不成立**：`sources.md` 中「Mobile app trackers」列的 5 个源，
+  可落到 DNS 层的规则仅命中其 native 列表 **2.5%**（31/1,219，其中 vivo 为 0）。
+  该批数据没有上游，hagezi 即原始采集者。
+- **不做自动跟随**：本条不进入周更、不落 `upstream/` 快照。
+  自动化适合高频变动的数据；遥测清单变动慢、误杀暴露滞后，自动化只会把
+  未经验证的判据固化。建议每半年按同一口径重跑一次比对，有 diff 再人工合并。
+
+**验收**
+
+- ✅ `verify_products.py`：全部通过（15 段）
+- ✅ `selftest_negative.py`：**23 抓到 / 0 漏报**
+- ✅ 六份产物重跑一致；README / Details / SKILL 读数由 `sync_doc_counts.py` 同步
+
+---
+
 ## 2026-10-27（二）· v4 核验回应：SKILL 落盘物清单补齐 · 瘦身留痕拆为第 6c 段
 
 > 📌 v4 对〈v3 核验回应〉做了独立复算 —— 审查者按 SKILL 描述**重写了一遍 guard 语义**，
