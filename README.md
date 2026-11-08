@@ -6,7 +6,7 @@
 
 拦得准 · 放得对 · 负担轻
 
-[![Ads](https://img.shields.io/badge/%E6%8B%A6%E6%88%AA-8550%20%E6%9D%A1-0969da?style=flat-square)](#-拿来即用)
+[![Ads](https://img.shields.io/badge/%E6%8B%A6%E6%88%AA-8493%20%E6%9D%A1-0969da?style=flat-square)](#-拿来即用)
 [![White](https://img.shields.io/badge/%E6%94%BE%E8%A1%8C-50%20%E6%9D%A1-2da44e?style=flat-square)](#-拿来即用)
 [![Frozen](https://img.shields.io/badge/Frozen-Jinx%203.2.3-8250df?style=flat-square)](https://github.com/VME98/jinx-rules)
 [![CI](https://github.com/RiverFlowsInUUU/RFU-Rules/actions/workflows/ci.yml/badge.svg)](https://github.com/RiverFlowsInUUU/RFU-Rules/actions/workflows/ci.yml)
@@ -29,9 +29,9 @@
 
 | <div align="center">客户端</div> | <div align="center">🚫 拦截规则集</div> | <div align="center">✅ 放行规则集</div> |
 |:--|:--|:--|
-| **mihomo** / OpenClash | [`mihomo-ads.yaml`](https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/mihomo-ads.yaml) `8550` | [`mihomo-direct.yaml`](https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/mihomo-direct.yaml) `50` |
-| **Surge** / **Egern** | [`surge-ads.list`](https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/surge-ads.list) `8550` | [`surge-direct.list`](https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/surge-direct.list) `50` |
-| **sing-box** | [`sing-box-ads.json`](https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/sing-box-ads.json) `8550` | [`sing-box-direct.json`](https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/sing-box-direct.json) `50` |
+| **mihomo** / OpenClash | [`mihomo-ads.yaml`](https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/mihomo-ads.yaml) `8493` | [`mihomo-direct.yaml`](https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/mihomo-direct.yaml) `50` |
+| **Surge** / **Egern** | [`surge-ads.list`](https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/surge-ads.list) `8493` | [`surge-direct.list`](https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/surge-direct.list) `50` |
+| **sing-box** | [`sing-box-ads.json`](https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/sing-box-ads.json) `8493` | [`sing-box-direct.json`](https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/sing-box-direct.json) `50` |
 
 链接即地址。备用镜像换前缀：`https://cdn.jsdelivr.net/gh/RiverFlowsInUUU/RFU-Rules@main/`。
 
@@ -54,7 +54,7 @@
 
 ```text
 1. 放行 → DIRECT   ← 49 条功能域，推送与登录全靠它
-2. 拦截 → REJECT   ← 8550 条，四类域名
+2. 拦截 → REJECT   ← 8493 条，四类域名
 3. 其余分流        ← 照你原有的走
 ```
 
@@ -161,7 +161,7 @@ DNS 层拒答（可选）与组名改法见[详情](DetailsReadme/DetailsReadme.
 
 | | | |
 |:--|:--|:--|
-| 🚫 拦截 | **8550 条** | 广告 · 统计 · 隐私采集（含设备遥测） · PCDN；灰产在构建时就被排除 |
+| 🚫 拦截 | **8493 条** | 广告 · 统计 · 隐私采集（含设备遥测） · PCDN；灰产在构建时就被排除 |
 | ✅ 放行 | **50 条** | 43 条精确 + 7 条后缀（含 6 条手工补充） |
 | 🧩 同源 | 四端逐条等价 | 换客户端不换名单 |
 | 🪶 轻量 | 纯域名后缀 | 无通配 · 无正则 · 无 IP，软路由与手机都跑得动 |

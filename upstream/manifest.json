@@ -1,5 +1,5 @@
 {
-  "frozen_at": "2026-11-02T02:29:41+00:00",
+  "frozen_at": "2026-11-08T22:34:01+00:00",
   "policy": "上游快照落盘，构建只读 upstream/，不联网。jinx 钉死 3.2.3，其余源每周由定时工作流刷新。要更新跑 skill/scripts/freeze_upstream.py。",
   "hash_basis": "bytes 与 sha256 均按换行归一化（LF）后的文本计算，与仓库内 .gitattributes 的 eol=lf 一致。",
   "jinx_commit": "c85751d",
@@ -53,27 +53,27 @@
       "group": "217heidai",
       "path": "217heidai/adblocksurgelite.list",
       "url": "https://github.com/217heidai/adblockfilters/releases/download/rule/adblocksurgelite.list",
-      "sha256": "70d56affc086392ac9ee146b0489f0ba7e16f31a1151dee2163e94bcad5e0914",
-      "bytes": 120788,
-      "lines": 5791,
+      "sha256": "56d43d26f2ed3cc187924d9920f6ac54ed68c8be0ff7283f0d725621564a6d71",
+      "bytes": 120163,
+      "lines": 5738,
       "note": "16 源聚合后 ∩ china.txt 的 lite 档（DOMAIN-SET 格式）"
     },
     {
       "group": "217heidai",
       "path": "217heidai/china.txt",
       "url": "https://github.com/217heidai/adblockfilters/releases/download/domain/china.txt",
-      "sha256": "238ec9b5fbf3be1660d4b0d055778cd54b2889a89598c5d26a51cd1425ed7c23",
-      "bytes": 172263,
-      "lines": 9641,
+      "sha256": "f225f1338e60c80863a390597a3dbfb5040a38403d72d024ab194397103cde07",
+      "bytes": 166901,
+      "lines": 9314,
       "note": "中国域名清单（判定「中国生态」的基准）"
     },
     {
       "group": "cn",
       "path": "cn/AdGuard_Chinese_filter.txt",
       "url": "https://github.com/217heidai/adblockfilters/releases/download/source/AdGuard_Chinese_filter.txt",
-      "sha256": "32ecde77b298b4b88b73263c1617828468a3c89f70520569a70a77c9b69207a1",
-      "bytes": 735247,
-      "lines": 21182,
+      "sha256": "9637594d9ae327ce1eaeb9e57d37d0e74651c46780c689119d685a3a2cf8c5f5",
+      "bytes": 735317,
+      "lines": 21202,
       "note": "AdGuard 官方中文过滤器"
     },
     {
