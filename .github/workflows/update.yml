@@ -33,7 +33,7 @@ concurrency:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 15   # freeze 拉源 + regen 双闸门，15 分钟充分裕量
+    timeout-minutes: 15   # freeze 拉源 + regen 三层闸门，15 分钟充分裕量
     steps:
       - uses: actions/checkout@v7
 
@@ -48,7 +48,7 @@ jobs:
         run: python skill/scripts/freeze_ai.py
 
       - name: ② 重跑八份产物 + 三层闸门
-        # regen 自带：快照校验 → direct → ads → 六份产物 → verify + selftest。
+        # regen 自带：快照校验 → direct → ads → AI → 八份产物 → 三层闸门。
         # 任何一步判负都会让本步失败，后面的提交不会执行。
         run: bash skill/scripts/regen.sh
 

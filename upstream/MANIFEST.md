@@ -44,7 +44,7 @@ jinx 上游自 `3.2.4` 起改为加密发布（`new-rules/*.enc`，需接收方 
 构建产物（不联网，只读本目录）：
 
 ```bash
-bash skill/scripts/regen.sh           # 一条命令：快照校验 → direct → ads → 六份产物 → 双闸门
+bash skill/scripts/regen.sh           # 一条命令：快照校验 → direct → ads → AI → 八份产物 → 三层闸门
 bash skill/scripts/regen.sh --build   # 只重建，不跑闸门
 ```
 

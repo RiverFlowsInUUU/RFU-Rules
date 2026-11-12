@@ -32,7 +32,8 @@ agent_created: true
 4. **不手改 `upstream/`。** 它有 sha256 清单（`upstream/manifest.json`）。手改上游等于悄悄换掉合并基线，而第 6 段只会照着被改过的源重跑、照样全绿 —— 这类失真只能靠第 6b 段挡。
 5. **规则顺序是生死线。** `direct` 必须排在 `ads` 之前。拦截集里有平台主域（`umeng.com` / `tanx.com` / `getui.net`）覆盖了放行清单的功能子域，靠「更具体的规则先命中 DIRECT」保护。顺序颠倒 = 推送和登录失效。
 6. **不给拦截行加 `pre-matching`。** 它会把 REJECT 抽到所有规则之前评估，`direct` 那行永远轮不到。
-7. **改完必跑两层闸门**，缺一不可：`verify_products.py` 判对错，`selftest_negative.py` 证明闸门自己还能抓错。
+7. **改完必跑三层闸门**，缺一不可：`verify_products.py` 判 ads/direct、`verify_ai.py` 判 AI 组、
+   `selftest_negative.py` 证明闸门自己还能抓错。
 8. **本仓不发版；上游快照每周自动刷新，jinx 除外。** 订阅地址钉在 `main`，客户端自行按 `update-interval` 拉取；社区同类规则仓（blackmatrix7 / hagezi / Sukka）均如此，Release/tag 与滚动数据模型不匹配 —— 唯一的 `v3.2.3-2026.10.27` 孤版 Release 已于 2026-10-27 删除，本仓无任何发版物。快照刷新只走 `.github/workflows/update.yml`（每周一 03:00 UTC，可手动触发）或手动跑 `freeze_upstream.py`，**有 diff 才提交，无 diff 静默结束**；抓取失败即整体失败，不提交半新半旧的快照。jinx 的 `JINX_COMMIT` 任何情况下不动。
 
 ## 构建链（三步，顺序不可交换）
@@ -336,7 +337,9 @@ ai_sources/ 10 份上游快照 ──build_ai.py──> surge-ai.list ──to_m
 
 - `skill/scripts/freeze_ai.py`：**唯一联网入口**，由 `update.yml` 每周跑一次，抓 10 源并写 `ai_sources/MANIFEST.json`。任一源失败即整体不落盘（与 `freeze_upstream.py` 同纪律），内容未变的源沿用上次取用时间以免空转。`--check` 供 CI 离线校验快照未被手改。
 - `skill/scripts/build_ai.py`：归并器。人工裁定全在常量里 —— `WIDE_REQUIRED`、`EXTRA_EXACT`、`EXTRA_KEYWORD`、过宽后缀 `BLACKLIST`、9 个 `BLACKLIST_EXACT` 主机，以及 KEYWORD/DOMAIN 两类冗余归并。**上游刷新不会冲掉这些裁定**，这是「静态整合快照」能改成周更的前提。
-- `skill/tests/verify_ai.py`：独立闸门，挂 `regen.sh` 末尾与 `ci.yml`。除两格式逐条等价、条数自述、零 IP、可复现外，还会断言 `googleapis.com` 宽后缀没有回流、`-pa` 关键字兜底仍在 —— 防的正是「自动刷新把人工裁定冲掉」这一类静默失真。
+- `skill/tests/verify_ai.py`：独立闸门（15 项断言），挂 `regen.sh` 末尾与 `ci.yml`。除两格式逐条等价、条数自述、零 IP、可复现外，还会断言 `googleapis.com` 宽后缀没有回流、`-pa` 关键字兜底仍在 —— 防的正是「自动刷新把人工裁定冲掉」这一类静默失真。
+  - ⚠️ **踩过的同构坑（2026-11-12 二次核查）**：初版把 `GENERIC_INFRA_EXACT` 从 `build_ai.py` **import** 进来，再拿它检查产物有没有回流该集合里的主机。实测把 `build_ai.py` 里的常量删掉一条、重跑生成链让主机回流后，判据拿同一个被删空的集合复核，**15 项照样全绿**。这正是本文件〈断言口径〉里「与它要检的东西同构」那条纪律。
+  - ⇒ 现在 `verify_ai.py` **独立持有** `GUARDED_HOSTS`（逐项与 `build_ai.py` 的 `GENERIC_INFRA_EXACT` 对齐，但故意不 import），并断言清单条数未被删减。改任一处忘了另一处会立刻判负；两处一起改则属明显人为破坏。回归验证脚本见本仓工作区外的 `adversarial_check.py`（注入「删护栏常量」必须判负）。
 - 规模护栏：单份上游快照 ≤ 5000 行、产物 100–1000 条。上游改成整站 dump 或返回错误页时，周更应当判负而不是把垃圾发出去。
 
 ⚠️ 产物条数每周可能变：**任何文档都不要在正文写死 AI 条数**，一律指向 `surge-ai.list` 头注。README 的 ads/direct 读数仍由 `sync_doc_counts.py` 维护，两者互不干扰。

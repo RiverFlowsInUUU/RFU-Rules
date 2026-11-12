@@ -46,6 +46,27 @@ AI_DIR = ROOT / "ai_sources"
 ok: list[str] = []
 bad: list[str] = []
 
+# ⚠️ 周更护栏的期望清单 —— **故意不从 build_ai.py 导入**。
+#   2026-11-12 二次核查实测：原实现 `from build_ai import GENERIC_INFRA_EXACT`，
+#   再用这个集合去检查产物里有没有回流 —— 典型的同构互保。把 build_ai.py 里的
+#   常量删掉一条、重跑生成链让该主机回流后，判据拿同一个被删空的集合复核，
+#   14 项断言照样全绿（假绿）。⇒ 判据必须独立持有一份期望值；改 build_ai.py
+#   忘了同步这里会立刻判负，两处一起改则属明显的人为破坏（不在自动化防线内）。
+#   与 build_ai.py 的 GENERIC_INFRA_EXACT 必须逐项一致，改任一处都要同步另一处。
+GUARDED_HOSTS = {
+    'fonts.googleapis.com', 'fonts.gstatic.com', 'ssl.gstatic.com',
+    'maps.googleapis.com', 'maps.gstatic.com', 'play.google.com', 'ogs.google.com',
+    'lh3.google.com', 'csp.withgoogle.com', 'content-autofill.googleapis.com',
+    'jnn-pa.googleapis.com', 'optimizationguide-pa.googleapis.com',
+    'streetviewpixels-pa.googleapis.com',
+    'encrypted-tbn0.gstatic.com', 'encrypted-tbn1.gstatic.com',
+    'encrypted-tbn2.gstatic.com', 'encrypted-tbn3.gstatic.com',
+    'gspe1-ssl.ls.apple.com', 'apple-relay.cloudflare.com', 'apple-relay.fastly-edge.com',
+    'cp4.cloudflare.com',
+    'q.eu-central-1.amazonaws.com', 'q.us-east-1.amazonaws.com',
+}
+EXPECTED_GUARD_COUNT = 23
+
 
 def judge(cond: bool, msg_ok: str, msg_bad: str) -> None:
     (ok if cond else bad).append(msg_ok if cond else msg_bad)
@@ -130,16 +151,14 @@ def main() -> int:
                         ("DOMAIN,play.googleapis.com", "GMS 主网关精确项")):
         judge(needle in a, "%s 仍在" % why, "%s 丢失（%s）" % (why, needle))
 
-    # 6b. 周更护栏：通用基础设施域不得回流
-    try:
-        sys.path.insert(0, str(ROOT / "skill/scripts"))
-        from build_ai import GENERIC_INFRA_EXACT  # noqa: E402
-        leaked = [x for x in a if x.split(",", 1)[-1] in GENERIC_INFRA_EXACT]
-        judge(not leaked,
-              "周更护栏：%d 个通用基础设施主机未回流" % len(GENERIC_INFRA_EXACT),
-              "通用基础设施域回流（人工裁定被上游冲掉）：%s" % leaked[:5])
-    except Exception as e:  # noqa: BLE001
-        judge(False, "", "无法载入 GENERIC_INFRA_EXACT：%s" % e)
+    # 6b. 周更护栏：通用基础设施域不得回流（期望清单由本判据独立持有）
+    judge(len(GUARDED_HOSTS) == EXPECTED_GUARD_COUNT,
+          "周更护栏清单完整（%d 项）" % len(GUARDED_HOSTS),
+          "周更护栏清单被删减：%d 项，应为 %d 项" % (len(GUARDED_HOSTS), EXPECTED_GUARD_COUNT))
+    leaked = [x for x in a if x.split(",", 1)[-1] in GUARDED_HOSTS]
+    judge(not leaked,
+          "周更护栏：%d 个通用基础设施主机未回流" % len(GUARDED_HOSTS),
+          "通用基础设施域回流（人工裁定被上游冲掉）：%s" % leaked[:5])
 
     # 7. 规模护栏
     big = [(p.name, len(p.read_text(encoding="utf-8").splitlines()))
