@@ -1,0 +1,96 @@
+{
+  "frozen_at": "2026-11-12T06:17:44+00:00",
+  "policy": "AI 清单的 10 份上游快照；由 update.yml 每周刷新，build_ai.py 只读本目录离线归并。人工裁定（googleapis 收窄 / -pa 关键字 / 黑名单主机）在 build_ai.py 常量里，刷新上游不会冲掉它们。要手改数据请改 build_ai.py 后重跑 regen.sh。",
+  "sources": [
+    {
+      "path": "repcz-ai.list",
+      "url": "https://raw.githubusercontent.com/Repcz/Tool/X/Surge/Rules/AI.list",
+      "note": "Repcz/Tool · 主参考集（滚动）",
+      "sha256": "3d071b1b02deddc2defb382dbab1b02a1b8a5d20fbef8cb7ea2fb7442911c56c",
+      "bytes": 1723,
+      "lines": 59,
+      "fetched_at": "2026-11-12T06:17:44+00:00"
+    },
+    {
+      "path": "my-ai.list",
+      "url": "https://ddgksf2013.top/filter/Ai.yaml",
+      "note": "ddgksf2013.top 墨鱼 Ai.yaml · 伴生域基线",
+      "sha256": "f32c38ed10fb498dcc3b8e65a1767ac6fc95e005b1cbfe0a60e35c1f78635f13",
+      "bytes": 3743,
+      "lines": 142,
+      "fetched_at": "2026-11-12T05:53:00+00:00"
+    },
+    {
+      "path": "acl4ssr-ai.list",
+      "url": "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Ruleset/AI.list",
+      "note": "ACL4SSR · 停更基线（长期无增量）",
+      "sha256": "63e70895ac8c04c3b28965dc0b4ba9ceb3a1313a66b49487ed96005debc97e1e",
+      "bytes": 1456,
+      "lines": 51,
+      "fetched_at": "2026-11-12T05:53:00+00:00"
+    },
+    {
+      "path": "bm7-OpenAI.list",
+      "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Surge/OpenAI/OpenAI.list",
+      "note": "blackmatrix7 OpenAI",
+      "sha256": "6f4047cdbf6953cf5d9b38c4ccd6da7bc6f1acb91b7a87134f25d5b8f5d2408b",
+      "bytes": 1353,
+      "lines": 45,
+      "fetched_at": "2026-11-12T05:53:00+00:00"
+    },
+    {
+      "path": "bm7-Gemini.list",
+      "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Surge/Gemini/Gemini.list",
+      "note": "blackmatrix7 Gemini",
+      "sha256": "db8f69154426dca76792ab80b3ad6b0e2d078ebe0e52e76faec1724245a4ec49",
+      "bytes": 605,
+      "lines": 21,
+      "fetched_at": "2026-11-12T05:53:00+00:00"
+    },
+    {
+      "path": "bm7-Claude.list",
+      "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Surge/Claude/Claude.list",
+      "note": "blackmatrix7 Claude",
+      "sha256": "870e7e25d798e7f00338507f773b0eea4dfd15e25e9df0a27d5ae421ae1ab378",
+      "bytes": 244,
+      "lines": 10,
+      "fetched_at": "2026-11-12T05:53:00+00:00"
+    },
+    {
+      "path": "bm7-Copilot.list",
+      "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Surge/Copilot/Copilot.list",
+      "note": "blackmatrix7 Copilot",
+      "sha256": "12773330de34b84b7fd2f3f2af598480ea62d8574d8e9b8ae9d011a53c044d39",
+      "bytes": 1822,
+      "lines": 61,
+      "fetched_at": "2026-11-12T05:53:00+00:00"
+    },
+    {
+      "path": "bm7-BardAI.list",
+      "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Surge/BardAI/BardAI.list",
+      "note": "blackmatrix7 BardAI",
+      "sha256": "3dc3871ee3dcd4045d32794de6b8e5ffd9123afb71d67b3f1115b5dd3d53e619",
+      "bytes": 508,
+      "lines": 17,
+      "fetched_at": "2026-11-12T05:53:00+00:00"
+    },
+    {
+      "path": "meta-ai.list",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-ai-!cn.list",
+      "note": "MetaCubeX geosite category-ai-!cn · 最大覆盖源",
+      "sha256": "5d286a1abab308dee16a831361cc203cf0eafb0564f45b6e56b0791d26e4125d",
+      "bytes": 4222,
+      "lines": 217,
+      "fetched_at": "2026-11-12T06:17:44+00:00"
+    },
+    {
+      "path": "dler-ai.list",
+      "url": "https://raw.githubusercontent.com/dler-io/Rules/main/Surge/Surge%203/Provider/AI%20Suite.list",
+      "note": "dler-io/Rules AI Suite · 高质量补漏",
+      "sha256": "3d942e22380bf000725bd15191445e5f003a7456256f36d070a2a8c599dfeba8",
+      "bytes": 10055,
+      "lines": 328,
+      "fetched_at": "2026-11-12T06:17:44+00:00"
+    }
+  ]
+}

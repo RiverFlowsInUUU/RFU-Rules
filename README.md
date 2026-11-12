@@ -36,6 +36,23 @@
 链接即地址。备用镜像换前缀：`https://cdn.jsdelivr.net/gh/RiverFlowsInUUU/RFU-Rules@main/`。
 
 <details>
+<summary>🤖 还有一份 <b>RFU-AI</b> 分流清单（AI 策略组用）</summary>
+
+它和上面两组不是一回事：既不拦截也不放行，而是把 AI 服务域名送进 `AI` 组。由 10 份上游快照归并而来，随每周上游刷新重建；条数会变，以文件头注为准，此处不写死。
+
+| 客户端 | 规则集 |
+|:--|:--|
+| **mihomo** / OpenClash | [`mihomo-ai.yaml`](https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/mihomo-ai.yaml) |
+| **Surge** / **Egern** | [`surge-ai.list`](https://raw.githubusercontent.com/RiverFlowsInUUU/RFU-Rules/main/surge-ai.list) |
+
+> [!IMPORTANT]
+> mihomo 侧必须声明 `behavior: classical`、`format: yaml`。这份清单含 `DOMAIN-KEYWORD` 与 `URL-REGEX`，`domain` 行为下它们就是一串永远匹配不上的字符。
+>
+> `googleapis.com` 宽后缀被刻意收窄（YouTube 误伤实测）、`-pa` 动态命名空间由一条 `DOMAIN-KEYWORD` 兜住 —— 这些人工裁定写在 `skill/scripts/build_ai.py` 的常量里，上游快照刷新不会把它们冲掉。生成链与独立闸门见 `skill/SKILL.md`。
+
+</details>
+
+<details>
 <summary>🍂 想再叠加 <b>AWAvenue</b>？（可选 —— 969 条已含 912）</summary>
 
 | <div align="center">客户端</div> | <div align="center">🚫 拦截规则集</div> |

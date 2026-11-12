@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
-# regen.sh —— 一条命令重跑全部六份产物（离线，只读 upstream/）
+# regen.sh —— 一条命令重跑全部八份产物（离线，只读仓内快照）
 #
 # 顺序不可交换：
 #   ① direct 先生成 —— build_ads.py 要读 surge-direct.list 做「顺序保护重叠」报告；
 #   ② ads 再由三支路合成 —— 只读 upstream/，不联网；
-#   ③ 闸门最后跑 —— 两层都要（verify 判对错，selftest 证明闸门本身能抓错）。
+#   ③ AI 清单由 ai_sources/ 的 10 份快照单独归并（含 DOMAIN-KEYWORD / URL-REGEX，
+#      不能走 convert_ruleset.py 的 exact/suffix 两支路）；
+#   ④ 闸门最后跑：verify_products 判 ads/direct、verify_ai 判 AI、selftest 证明
+#      闸门本身能抓错。本脚本全程不联网；抓上游是 update.yml 里 freeze_*.py 的活。
 #
 # 用法：
 #   bash skill/scripts/regen.sh            # 重跑 + 校验
@@ -21,6 +24,7 @@ SK=skill/scripts/convert_ruleset.py
 
 echo "== 0/4 校验上游快照未被手改 =="
 "$PY" skill/scripts/freeze_upstream.py --check
+"$PY" skill/scripts/freeze_ai.py --check
 
 echo
 echo "== 1/4 direct 放行清单（上游白名单 → 瘦身 → 三平台）=="
@@ -57,16 +61,23 @@ echo "== 3.5/4 文档读数同步（构建器管产物，本步管读数，闸�
 "$PY" skill/scripts/sync_doc_counts.py
 
 echo
+echo "== 3.6/4 RFU-AI 清单（ai_sources/ 10 源归并 → mihomo / Surge 两格式）=="
+"$PY" skill/scripts/build_ai.py > /dev/null
+"$PY" skill/scripts/to_mihomo_ai.py
+
+echo
 if [ "${1:-}" = "--build" ]; then
   echo "== 只构建，跳过校验 =="
   echo "⚠️ 本次产物未经双闸门校验 —— 提交前请补跑 bash skill/scripts/regen.sh（不带 --build）"
   exit 0
 fi
 
-echo "== 4/4 闸门（两层）=="
+echo "== 4/4 闸门（三层）=="
 "$PY" skill/tests/verify_products.py
+"$PY" skill/tests/verify_ai.py
 "$PY" skill/tests/selftest_negative.py
 
 echo
 echo "✅ 全部通过。产物：mihomo-ads.yaml / surge-ads.list / sing-box-ads.json"
 echo "                  mihomo-direct.yaml / surge-direct.list / sing-box-direct.json"
+echo "                  mihomo-ai.yaml / surge-ai.list（Egern 复用 Surge 格式）"

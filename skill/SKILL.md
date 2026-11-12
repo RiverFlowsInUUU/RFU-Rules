@@ -322,3 +322,21 @@ uci commit openclash
 ## 定位规则源（拿不到 HTTPS 路径时）
 
 抓包只能拿到域名（SNI / DNS），路径在 TLS 内。成本更低的办法：拿 App 侧强特征（更新时的文件名、版本号、目录结构、报错文案）去搜 GitHub 代码搜索，再用其中的数据（版本号、条目数）与 App UI 显示交叉校验 —— 从「像」升级为「就是」。
+
+## RFU-AI 清单（2026-11-12 由 Self-Conf 迁入）
+
+这份清单是 **AI 策略组的分流依据**，与 ads/direct 两组并列但语义独立：既不拦截也不放行，且含 `DOMAIN-KEYWORD` / `URL-REGEX`，只能走 mihomo `classical`。因此**没有**并进 `verify_products.py` 的 PRODUCTS 三平台产物族 —— 那边的生成器只吃纯域名 + `exact|suffix`，硬并会破坏既有语义，还要重排段号引用、段数声明与负样本计数。
+
+链路（离线构建，全程不联网）：
+
+```text
+ai_sources/ 10 份上游快照 ──build_ai.py──> surge-ai.list ──to_mihomo_ai.py──> mihomo-ai.yaml
+                                    （Egern 复用 Surge 格式）
+```
+
+- `skill/scripts/freeze_ai.py`：**唯一联网入口**，由 `update.yml` 每周跑一次，抓 10 源并写 `ai_sources/MANIFEST.json`。任一源失败即整体不落盘（与 `freeze_upstream.py` 同纪律），内容未变的源沿用上次取用时间以免空转。`--check` 供 CI 离线校验快照未被手改。
+- `skill/scripts/build_ai.py`：归并器。人工裁定全在常量里 —— `WIDE_REQUIRED`、`EXTRA_EXACT`、`EXTRA_KEYWORD`、过宽后缀 `BLACKLIST`、9 个 `BLACKLIST_EXACT` 主机，以及 KEYWORD/DOMAIN 两类冗余归并。**上游刷新不会冲掉这些裁定**，这是「静态整合快照」能改成周更的前提。
+- `skill/tests/verify_ai.py`：独立闸门，挂 `regen.sh` 末尾与 `ci.yml`。除两格式逐条等价、条数自述、零 IP、可复现外，还会断言 `googleapis.com` 宽后缀没有回流、`-pa` 关键字兜底仍在 —— 防的正是「自动刷新把人工裁定冲掉」这一类静默失真。
+- 规模护栏：单份上游快照 ≤ 5000 行、产物 100–1000 条。上游改成整站 dump 或返回错误页时，周更应当判负而不是把垃圾发出去。
+
+⚠️ 产物条数每周可能变：**任何文档都不要在正文写死 AI 条数**，一律指向 `surge-ai.list` 头注。README 的 ads/direct 读数仍由 `sync_doc_counts.py` 维护，两者互不干扰。

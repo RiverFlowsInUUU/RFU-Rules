@@ -1,10 +1,11 @@
 name: Upstream refresh
 
-# 每周把六个上游源里的「活源」拉到最新并重建产物。
+# 每周把广告/放行与 AI 两组上游源里的「活源」拉到最新并重建产物。
 #
 # 分工：
 #   ci.yml     —— 校验仓内快照与产物的一致性（不联网，可复现）
-#   本工作流   —— 唯一联网换血的入口（跑 freeze_upstream.py + regen.sh）
+#   本工作流   —— 唯一联网换血的入口（freeze_upstream.py + freeze_ai.py + regen.sh）
+#                  AI 的 10 份快照由 freeze_ai.py 单独抓取，失败同样整体不提交。
 #
 # 边界：jinx 钉死在 3.2.3（上游 3.2.4 起加密发布，JINX_COMMIT 不动），
 # 其余源拉最新。抓取失败 ⇒ freeze 退出码 1 ⇒ 本工作流失败 ⇒ 不提交，
@@ -43,7 +44,10 @@ jobs:
       - name: ① 拉取上游最新（jinx 保持 3.2.3 钉死）
         run: python skill/scripts/freeze_upstream.py
 
-      - name: ② 重跑六份产物 + 双闸门
+      - name: ①b 拉取 RFU-AI 的 10 份上游快照（任一失败即整体不落盘）
+        run: python skill/scripts/freeze_ai.py
+
+      - name: ② 重跑八份产物 + 三层闸门
         # regen 自带：快照校验 → direct → ads → 六份产物 → verify + selftest。
         # 任何一步判负都会让本步失败，后面的提交不会执行。
         run: bash skill/scripts/regen.sh
